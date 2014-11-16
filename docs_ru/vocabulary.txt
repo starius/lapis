@@ -1,0 +1,13 @@
+action - обработчик
+request object - объект-запрос
+request options - опции запроса
+default route handler - обработчик по умолчанию
+application callbacks - функции приложения
+before filter - предобработчик
+view - представление
+render - отображать
+layout - макет
+
+statement - инструкция
+helper functions = helpers - вспомогательные функции
+
