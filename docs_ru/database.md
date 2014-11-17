@@ -1,28 +1,33 @@
-title: Database Access
+title: Работа с базой данных
 --
-# Database Access
+# Работа с базой данных
 
-Lapis comes with a set of classes and functions for working with
-[PostgreSQL](http://www.postgresql.org/). In the future other databases will be
-directly supported. In the meantime you're free to use other OpenResty database
-drivers, you just won't have access to Lapis' query API.
+В Lapis предусмотрена поддержка [БД PostgreSQL](http://www.postgresql.org/).
+В будущем планируется поддержка других БД.
+В настоящее время можно использовать и другие БД,
+драйвера которых есть в OpenResty, но в таком случае не будет
+доступа к API запросов Lapis.
 
-Every query is performed asynchronously through the [OpenResty cosocket
-API](http://wiki.nginx.org/HttpLuaModule#ngx.socket.tcp). A request will yield
-and resume automatically so there's no need to code with callbacks, queries can
-be written sequentially as if they were in a synchronous environment. Additionally
-connections to the server are automatically pooled for optimal performance.
+Каждый запрос выполняется асинхронно при помощи [OpenResty cosocket
+API](http://wiki.nginx.org/HttpLuaModule#ngx.socket.tcp).
+Запрос приостанавливается и продолжается автоматически,
+поэтому нет необходимости в callback'ах.
+Запросы можно писать последовательно, как будто они выполняются в
+синхронном окружении.
+Кроме того, соединения с сервером объединяются в пул для
+большей эффективности.
 
-[*pgmoon*](https://github.com/leafo/pgmoon) is the driver used in Lapis for
-communicating with PostgreSQL. It has the advantage of being able to be used
-within OpenResty's cosocket API in addition to on the command line using
-LuaSocket's synchronous API.
+[*pgmoon*](https://github.com/leafo/pgmoon) - драйвер PostgreSQL,
+который использует Lapis. Достоинством этого драйвера является
+возможность использовать его как асинхронно (OpenResty cosocket),
+так и синхронно (LuaSocket) с командной строки.
 
-## Establishing A Connection
+## Установление соединения
 
-The first step is to define the configuration for our server in the `postgres`
-block in our <span class="for_moon">`config.moon`</span><span
-class="for_lua">`config.lua`</span> file.
+Первым делом надо указать параметры подключения к БД
+в секции `postgres` файла конфигурации:
+<span class="for_moon">`config.moon`</span>
+<span class="for_lua">`config.lua`</span>.
 
 ```lua
 -- config.lua
@@ -48,25 +53,27 @@ config "development", ->
     database "my_database"
 ```
 
-`host` defaults to `127.0.0.1` and `user` defaults to `postgres`, so you can
-leave those fields out if they aren't different from the defaults. If a
-non-default port is required it can be appended to the `host` with colon
-syntax: `my_host:1234` (Otherwise `5432`, the PostgreSQL default, is used).
+По умолчанию `host` равен `127.0.0.1`, а `user` - `postgres`.
+Если используются эти значения, их можно не прописывать в файле конфигурации.
+По умолчанию используется порт `5432`.
+Если используется нестандартный порт, его надо приписать к адресу:
+`my_host:1234`.
 
-You're now ready to start making queries.
+Теперь можно перейти к запросам.
 
-## Making a Query
+## Выполнение запросов
 
-There are two ways to make queries:
+Есть два способа делать запросы:
 
-1. The raw query interface is a collection of functions to help you write SQL.
-1. The [`Model` class](#models) is a wrapper around a Lua table that helps you synchronize it with a row in a database table.
+1. Низкоуровневые функции, работающие с SQL.
+1. Класс [`Model`](#models) - обёртка над таблицей Lua,
+    которая синхронизуется со строкой таблицы БД.
 
-The `Model` class is the preferred way to interact with the database. The raw
-query interface is for achieving things the `Model` class in unable to do
-easily.
+Предпочтительно использование класса `Model`.
+Низкоуровневые функции предназначены для задач, с которыми
+плохо справляются модели.
 
-Here's an example of the raw query interface:
+Пример использования низкоуровневых функций:
 
 ```lua
 local lapis = require("lapis")
@@ -90,7 +97,7 @@ class extends lapis.Application
     "ok!"
 ```
 
-And the same query represented with the `Model` class:
+Аналогичный код на моделях:
 
 ```lua
 local lapis = require("lapis")
@@ -118,9 +125,7 @@ class extends lapis.Application
     "ok!"
 ```
 
-
-By default all queries will log to the Nginx notice log. You'll be able to see
-each query as it happens.
+По умолчанию, все запросы печатаются в лог Nginx уровня notice.
 
 ## Query Interface
 
@@ -132,17 +137,19 @@ local db = require("lapis.db")
 db = require "lapis.db"
 ```
 
-The `db` module provides the following functions:
+В модуле `db` есть следующие функции:
 
 ### `query(query, params...)`
 
-Performs a raw query. Returns the result set if successful, returns `nil` if
-failed.
+Выполняет запрос и возвращает результирующий набор в случае успеха,
+иначе возвращает nil.
 
-The first argument is the query to perform. If the query contains any `?`s then
-they are replaced in the order they appear with the remaining arguments. The
-remaining arguments are escaped with `escape_literal` before being
-interpolated, making SQL injection impossible.
+Первым аргументом передаётся выполняемый запрос.
+Если запрос содержит вопросительные знаки (`?`),
+они заменяются последующими аргументами в порядке
+их их появления в запросе.
+Эти аргументы экранируются при помощи функции `escape_literal`,
+что исключает SQL-инъекции.
 
 ```lua
 local res
@@ -164,12 +171,13 @@ UPDATE things SET color = 'blue'
 INSERT INTO cats (age, name, alive) VALUES (25, 'dogman', TRUE)
 ```
 
-A query that fails to execute will raise a Lua error. The error will contain
-the message from PostgreSQL along with the query.
+Запрос, который не удалось выполнить, приводит к ошибке Lua,
+в которую включается сообщение об ошибке от PostgreSQL
+и сам запрос.
 
 ### `select(query, params...)`
 
-The same as `query` except it appends `"SELECT"` to the front of the query.
+То же, что `query`, но добавляет в начало запроса `"SELECT"`.
 
 ```lua
 local res = db.select("* from hello where active = ?", db.FALSE)
@@ -185,7 +193,8 @@ SELECT * from hello where active = FALSE
 
 ### `insert(table, values, returning...)`
 
-Inserts a row into `table`. `values` is a Lua table of column names and values.
+Добавляет строку в таблицу `table`. Аргумент `values` -
+таблица Lua с именами столбцов и соответствующими значениями.
 
 ```lua
 db.insert("my_table", {
@@ -206,7 +215,8 @@ db.insert "my_table", {
 INSERT INTO "my_table" ("age", "name") VALUES (10, 'Hello World')
 ```
 
-A list of column names to be returned can be given after the value table:
+Список имён возвращаемых колонок можно указать после
+аргумента `values`.
 
 ```lua
 local res = db.insert("some_other_table", {
@@ -226,7 +236,8 @@ INSERT INTO "some_other_table" ("name") VALUES ('Hello World') RETURNING "id"
 
 ### `update(table, values, conditions, params...)`
 
-Updates `table` with `values` on all rows that match `conditions`.
+Обновляет в таблице `table` все строки, удовлетворяющие
+критериям `conditions`, согласно таблице значений `values`.
 
 ```lua
 db.update("the_table", {
@@ -251,7 +262,8 @@ db.update "the_table", {
 UPDATE "the_table" SET "name" = 'Dogbert 2.0', "active" = TRUE WHERE "id" = 100
 ```
 
-`conditions` can also be a string, and `params` will be interpolated into it:
+Аргумент `conditions` может быть строкой.
+В таком случае в неё подставляются аргументы `params`:
 
 ```lua
 db.update("the_table", {
@@ -271,7 +283,7 @@ UPDATE "the_table" SET "count" = count + 1 WHERE count < 10
 
 ### `delete(table, conditions, params...)`
 
-Deletes rows from `table` that match `conditions`.
+Удаляет строки таблицы, удовлетворяющие условиям `conditions`.
 
 ```lua
 db.delete("cats", { name: "Roo"})
@@ -285,7 +297,7 @@ db.delete "cats", name: "Roo"
 DELETE FROM "cats" WHERE "name" = 'Roo'
 ```
 
-`conditions` can also be a string
+Аргумент `conditions` также может быть строкой.
 
 ```moon
 db.delete("cats", "name = ?", "Gato")
@@ -301,8 +313,8 @@ DELETE FROM "cats" WHERE name = 'Gato'
 
 ### `raw(str)`
 
-Returns a special value that will be inserted verbatim into the query without being
-escaped:
+Возвращает специальный объект, который подставляется в
+запрос дословно, без экранирования:
 
 ```lua
 db.update("the_table", {
@@ -327,8 +339,9 @@ SELECT * from another_table where x = now()
 
 ### `escape_literal(value)`
 
-Escapes a value for use in a query. A value is any type that can be stored in a
-column. Numbers, strings, and booleans will be escaped accordingly.
+Экранирует значение для использования в запросе.
+Значение должно быть любым типом, который может храниться
+в столбце таблицы. Экранирует числа, строки и логические переменные.
 
 ```lua
 local escaped = db.escape_literal(value)
@@ -340,13 +353,13 @@ escaped = db.escape_literal value
 res = db.query "select * from hello where id = #{escaped}"
 ```
 
-`escape_literal` is not appropriate for escaping column or table names. See
-`escape_identifier`.
+Не надо использовать `escape_literal` для экранирования
+имён столбцов или таблиц.
+Для этого используйте `escape_identifier`.
 
 ### `escape_identifier(str)`
 
-Escapes a string for use in a query as an identifier. An identifier is a column
-or table name.
+Экранирует идентификатор (имя столбца или таблицы).
 
 ```lua
 local table_name = db.escape_identifier("table")
@@ -358,16 +371,16 @@ table_name = db.escape_identifier "table"
 res = db.query "select * from #{table_name}"
 ```
 
-`escape_identifier` is not appropriate for escaping values. See
-`escape_literal` for escaping values.
+Не надо использовать `escape_identifier` для экранирования
+значений. Экранируйте значения при помощи `escape_literal`.
 
-### Constants
+### Константы
 
-The following constants are also available:
+Доступны следующие константы:
 
- * `NULL` -- represents `NULL` in SQL
- * `TRUE` -- represents `TRUE` in SQL
- * `FALSE` -- represents `FALSE` in SQL
+ * `NULL` -- представляет `NULL` в SQL
+ * `TRUE` -- представляет `TRUE` в SQL
+ * `FALSE` -- представляет `FALSE` в SQL
 
 
 ```lua
@@ -382,12 +395,12 @@ db.update "the_table", {
 }
 ```
 
-## Models
+## Модели
 
-Lapis provides a `Model` base class for making Lua tables that can be
-synchronized with a database row. The class is used to represent a single
-database table, an instance of the class is used to represent a single row of
-that table.
+В Lapis есть базовый класс `Model`, с помощью которого
+таблицы Lua синхронизируются со строками таблиц БД.
+Класс соответствует таблице БД, а экземпляр класса -
+строке таблицы БД.
 
 The most primitive model is a blank model:
 
