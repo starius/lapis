@@ -67,7 +67,7 @@ config "development", ->
 
 1. Низкоуровневые функции, работающие с SQL.
 1. Класс [`Model`](#models) - обёртка над таблицей Lua,
-    которая синхронизуется со строкой таблицы БД.
+    которая синхронизуется с записью в БД.
 
 Предпочтительно использование класса `Model`.
 Низкоуровневые функции предназначены для задач, с которыми
@@ -193,8 +193,8 @@ SELECT * from hello where active = FALSE
 
 ### `insert(table, values, returning...)`
 
-Добавляет строку в таблицу `table`. Аргумент `values` -
-таблица Lua с именами столбцов и соответствующими значениями.
+Добавляет запись в таблицу `table`. Аргумент `values` -
+таблица Lua с именами полей и соответствующими значениями.
 
 ```lua
 db.insert("my_table", {
@@ -236,7 +236,7 @@ INSERT INTO "some_other_table" ("name") VALUES ('Hello World') RETURNING "id"
 
 ### `update(table, values, conditions, params...)`
 
-Обновляет в таблице `table` все строки, удовлетворяющие
+Обновляет в таблице `table` все записи, удовлетворяющие
 критериям `conditions`, согласно таблице значений `values`.
 
 ```lua
@@ -283,7 +283,7 @@ UPDATE "the_table" SET "count" = count + 1 WHERE count < 10
 
 ### `delete(table, conditions, params...)`
 
-Удаляет строки таблицы, удовлетворяющие условиям `conditions`.
+Удаляет записи таблицы, удовлетворяющие условиям `conditions`.
 
 ```lua
 db.delete("cats", { name: "Roo"})
@@ -341,7 +341,8 @@ SELECT * from another_table where x = now()
 
 Экранирует значение для использования в запросе.
 Значение должно быть любым типом, который может храниться
-в столбце таблицы. Экранирует числа, строки и логические переменные.
+в поле таблицы. Экранирует числа, строки и
+логические переменные.
 
 ```lua
 local escaped = db.escape_literal(value)
@@ -354,12 +355,12 @@ res = db.query "select * from hello where id = #{escaped}"
 ```
 
 Не надо использовать `escape_literal` для экранирования
-имён столбцов или таблиц.
+имён полей или таблиц.
 Для этого используйте `escape_identifier`.
 
 ### `escape_identifier(str)`
 
-Экранирует идентификатор (имя столбца или таблицы).
+Экранирует идентификатор (имя поля или таблицы).
 
 ```lua
 local table_name = db.escape_identifier("table")
@@ -398,11 +399,11 @@ db.update "the_table", {
 ## Модели
 
 В Lapis есть базовый класс `Model`, с помощью которого
-таблицы Lua синхронизируются со строками таблиц БД.
-Класс соответствует таблице БД, а экземпляр класса -
-строке таблицы БД.
+таблицы Lua синхронизируются с записями БД.
+Класс соответствует таблице БД, а объект класса -
+записи БД.
 
-The most primitive model is a blank model:
+Простейшая модель - пустая.
 
 
 ```lua
@@ -418,20 +419,23 @@ class Users extends Model
 ```
 
 <p class="for_lua">
-The first argument to <code>extend</code> is the name of the table to associate
-the model to.
+Первый аргумент функции <code>extend</code> -
+имя таблицы, которой соответствует данная модель.
 </p>
 
 <p class="for_moon">
-The name of the class is used to determine the name of the table. In this case
-the class name <code>Users</code> represents the table <code>users</code>. A
-class name of <code>HelloWorlds</code> would result in the table name
-<code>hello_worlds</code>. It is customary to make the class name plural.
+Имя таблицы выводится из имени класса.
+В данном случае класс <code>Users</code>
+соответствует таблице <code>users</code>.
+Класс <code>HelloWorlds</code> соответствовал бы
+таблице <code>hello_worlds</code>.
+Обычно слово в имени класса берут во множественном числе.
 </p>
 
 <p class="for_moon">
-If you want to use a different table name you can overwrite the
-<code>@table_name</code> class method:
+Чтобы использовать другое имя таблицы,
+надо переопределить статический метод <code>@table_name</code>
+класса модели.
 </p>
 
 ```moon
@@ -439,11 +443,14 @@ class Users extends Model
   @table_name: => "active_users"
 ```
 
-### Primary Keys
+### Первичные ключи
 
-By default all models have the primary key "id". This can be changed by setting
-the <span class="for_moon">`@primary_key`</span><span
-class="for_lua">`self.primary_key`</span> class variable.
+По умолчанию, все модели имеют первичный ключ "id".
+Чтобы поменять первичный ключ, надо изменить
+значение статического поля
+<span class="for_moon">`@primary_key`</span>
+<span class="for_lua">`self.primary_key`</span>
+класса модели.
 
 
 ```lua
@@ -457,7 +464,8 @@ class Users extends Model
   @primary_key: "login"
 ```
 
-If there are multiple primary keys then an array table can be used:
+Чтобы получить первичный ключ из нескольких полей,
+надо указать список полей:
 
 ```lua
 local Followings = Model:extend("followings", {
@@ -470,9 +478,10 @@ class Followings extends Model
   @primary_key: { "user_id", "followed_user_id" }
 ```
 
-### Finding a Row
+### Запрос одной записи
 
-For the following examples assume we have the following models:
+Для следующих примеров мы будем использовать
+эти модели:
 
 ```lua
 local Model = require("lapis.db.model").Model
@@ -495,9 +504,11 @@ class Tags extends Model
   @primary_key: {"user_id", "tag"}
 ```
 
-When you want to find a single row the `find` class method is used. In the
-first form it takes a variable number of values, one for each primary key in
-the order the primary keys are specified:
+Чтобы запросить из БД одну запись, используется статический
+метод `find` класса модели.
+Первый вариант этого метода принимает
+переменное число аргументов, по одному на каждое
+поле первичного ключа, в порядке их объявления:
 
 ```lua
 local user = Users:find(23232)
@@ -514,11 +525,13 @@ SELECT * from "users" where "id" = 23232 limit 1
 SELECT * from "tags" where "user_id" = 1234 and "tag" = 'programmer' limit 1
 ```
 
-`find` returns an instance of the model. In the case of the user, if there was a
-`name` column, then we could access the users name with `user.name`.
+Метод `find` возвращает объект модели.
+В случае пользователей, если бы было поле `name`,
+можно было бы получить имя пользователя при помощи
+`user.name`.
 
-We can also pass a table as an argument to `find`. The table will be converted
-to a `WHERE` clause in the query:
+В метод `find` можно передать таблицу.
+Таблица превращается в условия запроса:
 
 
 ```lua
@@ -533,11 +546,14 @@ user = Users\find email: "person@example.com"
 SELECT * from "users" where "email" = 'person@example.com' limit 1
 ```
 
-### Finding Many Rows
+### Запрос нескольких записей таблицы
 
-When searching for multiple rows the `select` class method is used. It works
-similarly to the `select` function from the raw query interface except you
-specify the part of the query after the list of columns to select.
+Чтобы получить из БД сразу несколько записей таблицы,
+используется метод `select`.
+Метод `select` аналогичен низкоуровневой функции `select`
+(см. выше), но указывается только часть запроса
+с условием.
+
 
 ```lua
 local tags = Tags:select("where tag = ?", "merchant")
@@ -551,10 +567,11 @@ tags = Tags\select "where tag = ?", "merchant"
 SELECT * from "tags" where tag = 'merchant'
 ```
 
-Instead of a single instance, an array table of instances is returned.
+Возвращает не один объект, а список объектов.
+Чтобы загрузить только определённые поля,
+укажите их в поле `fields` таблицы, передаваемой
+последним аргументом:
 
-If you want to restrict which columns are selected you can pass in a table as
-the last argument with the `fields` key set:
 
 ```lua
 local tags = Tags:select("where tag = ?", "merchant", { fields = "created_at as c" })
@@ -568,9 +585,11 @@ tags = Tags\select "where tag = ?", "merchant", fields: "created_at as c"
 SELECT created_at as c from "tags" where tag = 'merchant'
 ```
 
-Alternatively if you want to find many rows by their primary key you can use
-the `find_all` method. It takes an array table of primary keys. This method
-only works on tables that have singular primary keys.
+Чтобы загрузить несколько записей по их первичным ключам,
+воспользуйтесь методом `find_all`.
+В него подаётся список первичных ключей.
+Этот метод работает только с таблицей,
+у которой один первичный ключ.
 
 ```lua
 local users = Users:find_all({ 1,2,3,4,5 })
@@ -584,8 +603,9 @@ users = Users\find_all { 1,2,3,4,5 }
 SELECT * from "users" where "id" in (1, 2, 3, 4, 5)
 ```
 
-If you need to find many rows for another column other than the primary key you
-can pass in the optional second argument:
+Чтобы фильтровать не по первичному ключу,
+а по другому полю, надо передать имя этого
+поля вторым аргументом:
 
 
 ```lua
@@ -600,14 +620,16 @@ users = UserProfile\find_all { 1,2,3,4,5 }, "user_id"
 SELECT * from "UserProfile" where "user_id" in (1, 2, 3, 4, 5)
 ```
 
-The second argument can also be a table of options. The following properties
-are supported:
+Кроме того, вторым аргументом можно передать
+таблицу параметров запроса. Существуют следующие параметры:
 
-* `key` -- Specify the column name to find by, same effect as passing in a string as the second argument
-* `fields` -- Comma separated list of column names to fetch instead of the default `*`
-* `where` -- A table of additional `where` clauses for the query
+* `key` -- Имя поля, по которому идёт поиск (то же,
+    что просто указать это имя вторым аргументом)
+* `fields` -- Список через запятую с загружаемыми полями
+    (по умолчанию все: `*`)
+* `where` -- Дополнительное условие
 
-For example:
+Пример:
 
 ```lua
 local users = UserProfile:find_all({1,2,3,4}, {
@@ -633,13 +655,16 @@ users = UserProfile\find_all {1,2,3,4}, {
 SELECT user_id, twitter_account from "things" where "user_id" in (1, 2, 3, 4) and "public" = TRUE
 ```
 
-### Inserting Rows
+### Добавление записей
 
-The `create` class method is used to create new rows. It takes a table of
-column values to create the row with. It returns an instance of the model. The
-create query fetches the values of the primary keys and sets them on the
-instance using the PostgreSQL `RETURN` statement. This is useful for getting
-the value of an auto-incrementing key from the insert statement.
+Новые записи добавляются в таблицу при помощи статического
+метода `create` класса модели.
+В метод `create` передаётся таблица со значениями полей
+записи.
+Возвращается созданный объект модели.
+Значения первичных ключей (в том числе автоинкрементных)
+записи добываются при помощи
+ключевого слова PostgreSQL `RETURN`.
 
 ```lua
 local user = Users:create({
@@ -659,14 +684,16 @@ user = Users\create {
 INSERT INTO "users" ("password", "login") VALUES ('1234', 'superuser') RETURNING "id"
 ```
 
-### Updating a Row
+### Обновление записи
 
-Instances of models have the `update` method for updating the row. The values
-of the primary keys are used to uniquely identify the row for updating.
+У объектов модели есть метод `update` для обновления
+записи.
+При обновлении запись однозначно идентифицируется по
+первичным ключам.
 
-The first form of update takes variable arguments. A list of strings that
-represent column names to be updated. The values of the columns are taken from
-the current values in the instance.
+Первый вариант `update` принимает переменное число аргументов:
+список названий полей, значения которых надо перенести
+из объекта модели в БД.
 
 ```lua
 local user = Users:find(1)
@@ -687,9 +714,10 @@ user\update "login", "email"
 UPDATE "users" SET "login" = 'uberuser', "email" = 'admin@example.com' WHERE "id" = 1
 ```
 
-Alternatively we can pass a table as the first argument of `update`. The keys
-of the table are the column names, and the values are the values to update the
-columns with. The instance is also updated. We can rewrite the above example as:
+Второй вариант `update` принимает таблицу,
+переводящую названия полей в их новые значения.
+Объект модели при этом тоже обновляется.
+Перепишем предыдущий пример:
 
 ```lua
 local user = Users:find(1)
@@ -711,12 +739,13 @@ user\update {
 UPDATE "users" SET "login" = 'uberuser', "email" = 'admin@example.com' WHERE "id" = 1
 ```
 
-> The table argument can also take positional values, which are treated the
-> same as the variable argument form.
+> Список обновляемых полей можно передавать в форме
+> таблицы-списка
+> (ещё один способ вызвать первый вариант `update`)
 
-### Deleting a Row
+### Удаление записи
 
-Just call `delete` on the instance:
+Вызовите на объекте модели метод `delete`:
 
 ```lua
 local user = Users:find(1)
@@ -732,12 +761,13 @@ user\delete!
 DELETE FROM "users" WHERE "id" = 1
 ```
 
-### Timestamps
+### Отметки времени
 
-Because it's common to store creation and update times, models have
-support for managing these columns automatically.
+Часто для в моделях хранять время создания и последнего
+изменения. Модели Lapis могут автоматизировать
+управление такими полями.
 
-When creating your table make sure your table has the following columns:
+Создавая таблицу, добавьте в неё следующие поля:
 
 
 ```sql
@@ -748,9 +778,10 @@ CREATE TABLE ... (
 )
 ```
 
-Then define your model with the <span class="for_moon">`@timestamp` class
-variable</span><span class="for_lua">`timestamp` property</span> set to
-true:
+Установите значение
+<span class="for_moon">статического поля `@timestamp`</span>
+<span class="for_lua">свойства `@timestamp`</span>
+в значение `true`:
 
 ```lua
 local Users = Model:extend("users", {
@@ -763,13 +794,13 @@ class Users extends Model
   @timestamp: true
 ```
 
-Whenever `create` and `update` are called the appropriate timestamp column will
-also be set.
+При вызове методов `create` и `update` соответствующее
+поле обновляется автоматически.
 
-You can disable the timestamp from being updated on an `update` by passing a
-final table argument setting <span class="for_moon">`timestamp:
-false`</span><span class="for_lua">`timestamp = false`</span>:
-
+Чтобы отключить обновление поля, передайте в `update`
+последним аргументом таблицу
+<span class="for_moon">`timestamp: false`</span>
+<span class="for_lua">`timestamp = false`</span>:
 
 ```lua
 local Users = Model:extend("users", {
@@ -778,11 +809,11 @@ local Users = Model:extend("users", {
 
 local user = Users:find(1)
 
--- first form
+-- первый вариант
 user:update({ name = "hello world" }, { timestamp = false })
 
 
--- second form
+-- второй вариант
 user.name = "hello world"
 user.age = 123
 user:update("name", "age", { timestamp = false})
@@ -794,60 +825,66 @@ class Users extends Model
 
 user = Users\find 1
 
--- first form
+-- первый вариант
 user\update { name: "hello world" }, { timestamp: false }
 
--- second form
+-- второй вариант
 user.name = "hello world"
 user.age = 123
 user\update "name", "age", timestamp: false
 ```
 
-### Preloading Associations
+### Предзагрузка связанных объектов
 
-A common pitfall when using active record type systems is triggering many
-queries inside of a loop. In order to avoid situations like this you should
-load data for as many objects as possible in a single query before looping over
-the data.
+При использовании систем типа ActiveRecord часто
+сталкиваются с проблемой множественных запросов
+для загрузки связанных объектов
+при обходе списка объектов.
+Чтобы справиться с этой проблемой, надо загрузить данные
+для наиболее широкого множества объектов
+перед проходом по ним.
 
-We'll need some models to demonstrate: (The columns are annotated in a comment
-above the model).
+Нам понадобится парочка моделей, чтобы проиллюстрировать
+эту ситуацию: (Поля прописаны в комментариях над моделью.)
 
 ```lua
 local Model = require("lapis.db.model").Model
 
--- table with columns: id, name
+-- таблица с полями: id, name
 local Users = Model:extend("users")
+
+-- таблица с полями: id, user_id, text_content
 local Posts = Model:extend("posts")
 ```
 
 ```moon
 import Model from require "lapis.db.model"
 
--- table with columns: id, name
+-- таблица с полями: id, name
 class Users extends Model
 
--- table with columns: id, user_id, text_content
+-- таблица с полями: id, user_id, text_content
 class Posts extends Model
 ```
 
-Given all the posts, we want to find the user for each post. We use the
-`include_in` class method to include instances of that model in the array of
-model instances passed to it.
+Мы хотим для каждой статьи (post) получить
+соответствующего ей пользователя.
+Чтобы включить данные о пользователе в объект статьи,
+используется статический метод класса `Users:include_in`:
 
 ```lua
-local posts = Posts:select() -- this gets all the posts
+local posts = Posts:select() -- загрузить все статьи
 Users:include_in(posts, "user_id")
 
-print(posts[1].user.name) -- print the fetched data
+print(posts[1].user.name) -- имя пользователя первой статьи
 ```
 
 ```moon
-posts = Posts\select! -- this gets all the posts
+posts = Posts\select! -- загрузить все статьи
 
 Users\include_in posts, "user_id"
 
-print posts[1].user.name -- print the fetched data
+print posts[1].user.name -- имя пользователя первой статьи
 ```
 
 ```sql
@@ -855,15 +892,20 @@ SELECT * from "posts"
 SELECT * from "users" where "id" in (1,2,3,4,5,6)
 ```
 
-Each post instance is mutated to have a `user` property assigned to it with an
-instance of the `Users` model. The first argument of `include_in` is the array
-table of model instances. The second argument is the column name of the foreign
-key found in the array of model instances that maps to the primary key of the
-class calling the `include_in`.
+В объект каждой статьи добавляется поле `user`, в котором
+хранится объект модели `Users`.
+Первым аргументом в метод `include_in` передаётся
+список объектов модели.
+Второй аргумент - имя внешнего ключа
+(этот внешний ключ ссылается из объектов, переданных
+как список первым аргументом, в первичный ключ
+модели, на которой вызвали метод `include_in`.
 
-The name of the inserted property is derived from the name of the foreign key.
-In this case, `user` was derived from the foreign key `user_id`. If we want to
-manually specify the name we can do something like this:
+Имя поля, в которое помещается загружаемый объект,
+выводится из имени внешнего ключа.
+В данном примере, имя поля `user` выводится
+из `user_id` (имя внешнего ключа).
+А можно задать этому полю своё имя:
 
 
 ```lua
@@ -874,22 +916,25 @@ Users:include_in(posts, "user_id", { as: "author" })
 Users\include_in posts, "user_id", as: "author"
 ```
 
-Now all the posts will contain a property named `author` with an instance of
-the `Users` model.
+Теперь каждая статья содержит поле `author`,
+в котором хранится объект модели `Users`.
 
-Sometimes the relationship is flipped. Instead of the list of model instances
-having the foreign key column, the model we want to include might have it. This
-is common in one-to-one relationships.
+В предыдущем примере мы подгружали объекты,
+на которые ссылаются объекты из списка.
+Бывают обратные случаи, когда нужно загрузить
+вспомогательные объекты, ссылающиеся на
+объекты из списка. Такое часто случается
+в случае отношений "Один-к-одному".
 
-Here's another set of example models:
+Рассмотрим модели, иллюстрирующие эту ситуацию:
 
 ```lua
 local Model = require("lapis.db.model").Model
 
--- table with columns: id, name
+-- поля: id, name
 local Users = Model:extend("users")
 
--- table with columns: user_id, twitter_account, facebook_username
+-- поля: user_id, twitter_account, facebook_username
 local UserData = Model:extend("user_data")
 
 ```
@@ -897,15 +942,14 @@ local UserData = Model:extend("user_data")
 ```moon
 import Model from require "lapis.db.model"
 
--- columns: id, name
+-- поля: id, name
 class Users extends Model
 
--- columns: user_id, twitter_account, facebook_username
+-- поля: user_id, twitter_account, facebook_username
 class UserData extends Model
 ```
 
-Now let's say we have a collection of users and we want to fetch the associated
-user data:
+Подгрузим `UserData` для каждого пользователя из списка:
 
 ```lua
 local users = Users:select()
@@ -925,22 +969,26 @@ print users[1].user_data.twitter_account
 SELECT * from "user_data" where "user_id" in (1,2,3,4,5,6)
 ```
 
-In this example we set the `flip` option to true in the `include_in` method.
-This causes the search to happen against our foreign key, and the ids to be
-pulled from the `id` of the array of model instances.
+Мы передали параметр `flip` (перевернуть)
+со значением `true` в метод `include_in`.
+Произошёл поиск объектов, несущих внешние ключи,
+ссылающиеся на объекты из списка.
 
-Additionally, the derived property name that is injected into the model
-instances is created from the name of the included table. In the example above
-the `user_data` property contains the included model instances. (Had it been
-plural the table name would have been made singular)
+Кроме того, имя поля, в которое помещается подгруженный
+объект, выводится из имени таблицы, объекты которой
+подгружаются. В примере подгруженный объект помещается в
+поле `user_data`.
+(Если бы имя таблицы было во множественном числе,
+то имя поля было бы в единственном.)
 
-### Constraints
+### Ограничения
 
-Often before we insert or update a row we want to check that some conditions
-are met. In Lapis these are called constraints. For example let's say we have a
-user model and users are not allowed to have the name "admin".
+Часто перед добавлением или обновлением записей
+надо проверить выполнение определённых условий.
+Допустим, объекты модели `Users` не должны
+иметь имя "admin".
 
-We might define it like this:
+Этого можно добиться следующим образом:
 
 ```lua
 local Model = require("lapis.db.model").Model
@@ -977,18 +1025,22 @@ assert Users\create {
 }
 ```
 
-The <span class="for_moon">`@constraints` class variable</span><span class="for_lua">`constraints` property</span> is a table that maps column name to a
-function that should check if the constraint is broken. If anything truthy is
-returned from the function then the update/insert fails, and that is returned
-as the error message.
+<span class="for_moon">Статическое поле `@constraints`</span>
+<span class="for_lua">Свойство `constraints`</span> -
+таблица, которая сопоставляет имя поля функции,
+которая проверяет, нарушено ли ограничение.
+Если функция возвращает истинное значение,
+то вставка или обновление записи срывается, а это
+значение используется в качестве сообщения об ошибке.
 
-In the example above, the call to `assert` will fail with the error `"User can
-not be named admin"`.
+В этом примере вызов `assert` сорвётся со следующим
+сообщением об ошибке: `"User can not be named admin"`.
 
-The constraint check function is passed 4 arguments. The model class, the value
-of the column being checked, the name of the column being checked, and lastly
-the object being checked. On insertion the object is the table passed to the
-create method. On update the object is the instance of the model.
+Проверяющая функция получает 4 аргумента: класс модели,
+значение поля, имя поля и проверяемый объект.
+В случае вставки новой записи в качестве этого объекта
+выступает таблица, переданная в метод `create`.
+В случае обновления передаётся объект модели.
 
 ### Pagination
 

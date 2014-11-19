@@ -11,6 +11,14 @@ layout - макет
 statement - инструкция
 helper functions = helpers - вспомогательные функции
 database driver - драйвер БД
-table row - строка
-table column - столбец
-instance - экземпляр
+table row - запись
+table column - поле
+instance - экземпляр || объект
+class method - статический метод
+class variable - статическое поле
+timestamp - отметка времени
+
+primary key - первичный ключ
+foreign key - внешний ключ
+
+fail - сорваться
