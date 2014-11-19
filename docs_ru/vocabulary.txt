@@ -10,4 +10,7 @@ layout - макет
 
 statement - инструкция
 helper functions = helpers - вспомогательные функции
-
+database driver - драйвер БД
+table row - строка
+table column - столбец
+instance - экземпляр
