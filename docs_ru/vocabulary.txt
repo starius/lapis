@@ -30,3 +30,11 @@ Database Schema - структура БД
 
 incremental schema changes - расширение структуры БД
 migration function - мигрирующая функция
+
+Utility - служебные
+
+array table - список
+key-value table - таблица ключ-значение
+
+CSRF token - CSRF-токен
+Nginx directive - директива Nginx

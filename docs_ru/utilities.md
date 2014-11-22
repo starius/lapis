@@ -1,10 +1,10 @@
-title: Utilities
+title: Служебные инструменты
 --
-# Utilities
+# Служебные инструменты
 
-## Functions
+## Функции
 
-Utility functions are found in:
+Подключим служебные функции:
 
 ```lua
 local util = require("lapis.util")
@@ -16,61 +16,65 @@ util = require "lapis.util"
 
 ### `unescape(str)`
 
-URL unescapes string
+Снимает экранирование URL со строки
 
 ### `escape(str)`
 
-URL escapes string
+Экранирует URL в строке
 
 ### `escape_pattern(str)`
 
-Escapes string for use in Lua pattern
+Экранирует строку для использования
+в качестве паттерна Lua
 
 ### `parse_query_string(str)`
 
-Parses query string into a table
+Превращает строку запроса в таблицу ключ-значение
 
 ### `encode_query_string(tbl)`
 
-Converts a key,value table into a query string
+Превращает таблицу ключ-значение в строку запроса
 
 ### `underscore(str)`
 
-Converst CamelCase to camel_case.
+Превращает строки вида `CamelCase` в `camel_case`.
 
 ### `slugify(str)`
 
-Converts a string to a slug suitable for a URL. Removes all whitespace and
-symbols and replaces them with `-`.
+Подготавливает строку для вставки в URL.
+Заменяет все пробелы и символы на `-`.
 
 ### `uniquify(tbl)`
 
-Iterates over array table `tbl` appending all unique values into a new array
-table, then returns the new one.
+Отбирает уникальные эелементы списка `tbl`,
+добавляет их в пустую таблицу и возвращает эту таблицу.
 
 ###  `trim(str)
 
-Trims the whitespace off of both sides of a string.
+Удаляет пробелы с обоих концов строки.
 
 ### `trim_all(tbl)`
 
-Trims the whitespace off of all values in a table. Uses `pairs` to traverse
-every key in the table.
+Перебирает все пары ключ-значение в таблице и
+применяет `trim` к каждому значению.
 
-The table is modified in place.
+Эта функция меняет таблицу.
 
 ### `trim_filter(tbl, [{keys ...}], [empty_val=nil])`
 
-Trims the whitespace off of all values in a table. The entry is removed from
-the table if the result is an empty string.
+Удаляет пробелы с обоих концов значений (строк)
+в таблице `tbl`.
+Если значение стало пустой строкой, удаляет
+этот элемент таблицы.
 
-If an array table `keys` is supplied then any other keys not in that list are
-removed (with `nil`, not the `empty_val`)
+Если передан список `keys`, то все ключи не из этого
+списка будут удалены из таблицы (путём присвоения
+значений к `nil`, не к `empty_val`).
 
-If `empty_val` is provided then the whitespace only values are replaced with
-that value instead of `nil`
+Если передан аргумент `empty_val`, тогда значения, состоящие
+только из пробелов, заменяются на него, а не на `nil`.
 
-The table is modified in place.
+Эта функция меняет таблицу.
 
 ```lua
 local db = require("lapis.db")
@@ -84,7 +88,7 @@ unknown_input = {
 
 trim_filter(unknown_input, {"username", "description"}, db.NULL)
 
--- unknown input is now:
+-- unknown_input теперь выглядит так:
 -- {
 --   username = "hello",
 --   description = db.NULL
@@ -104,7 +108,7 @@ unknown_input = {
 
 trim_filter unknown_input, {"username", "description"}, db.NULL
 
--- unknown input is now:
+-- unknown_input теперь выглядит так:
 -- {
 --   username: "hello"
 --   description: db.NULL
@@ -113,15 +117,18 @@ trim_filter unknown_input, {"username", "description"}, db.NULL
 
 ### `to_json(obj)`
 
-Converts `obj` to JSON. Will strip recursion and things that can not be encoded.
+Переводит `obj` в JSON.
+Удаляет из выдачи циклические связи и объекты,
+которые нельзя закодировать в JSON.
 
 ###  `from_json(str)`
 
-Converts JSON to table, a direct wrapper around Lua CJSON's `decode`.
+Переводит JSON в таблицу. Это прямая обёртка над
+функцией `decode` модуля CJSON.
 
-### Encoding Methods
+### Кодировщики
 
-Encoding functions are found in:
+Подключим кодировщики:
 
 ```lua
 local encoding = require("lapis.util.encoding")
@@ -133,34 +140,40 @@ encoding = require "lapis.util.encoding"
 
 ### `encode_base64(str)`
 
-Base64 encodes a string.
+Переводит строку в Base64.
 
 ### `decode_base64(str)`
 
-Base64 decodes a string.
+Переводит строку из Base64.
 
 ### `hmac_sha1(secret, str)`
 
-Calculates the hmac-sha1 digest of `str` using `secret`. Returns a binary
-string.
+Вычисляет хеш hmac-sha1 от строки `str` с ключом `secret`.
+Возвращается бинарная строка.
 
 ### `encode_with_secret(object, secret=config.secret)`
 
-Encodes a Lua object and generates a signature for it. Returns a single string
-that contains the encoded object and signature.
+Возвращает строку, содержащую объект `object`
+в закодированном виде и его подпись.
 
 ### `decode_with_secret(msg_and_sig, secret=config.secret)`
 
-Decodes a string created by `encode_with_secret`. The decoded object is only
-returned if the signature is correct. Otherwise returns `nil` and an error
-message. The secret must match what was used with `encode_with_secret`.
+Раскодирует строку, созданную при помощи `encode_with_secret`.
+Если подпись не сходится, возращает `nil` и сообщение
+об ошибке.
+
+Значение `secret` должно совпадать со значением,
+поданным в `encode_with_secret`.
 
 ### `autoload(prefix, tbl={})`
 
-Makes it so accessing an unset value in `tbl` will run a `require` to search
-for the value. Useful for autoloading components split across many files.
-Overwrites `__index` metamethod. The result of the require is stored in the
-table.
+Делает так, что попытка обращения к несуществующему полю
+в `tbl` приводит к загрузке соответствующего
+модуля при помощи `require`.
+Результат загрузки сохраняется в таблице.
+Помогает организовать автоподгрузку
+компонентов, разбросанных по нескольим файлам.
+Переопределяет метаметод `__index`.
 
 
 ```lua
@@ -177,20 +190,28 @@ models.HelloWorld --> will require "models.hello_world"
 models.foo_bar --> will require "models.foo_bar"
 ```
 
-## CSRF Protection
+## Защита от CSRF
 
-CSRF protection provides a way to prevent fraudulent requests that originate
-from other sites that are not your application. The common approach is to
-generate a special token when the user lands on your page, then resubmit that
-token on a subsequent POST request.
+Атака CSRF - это запросы из форм другого сайта,
+маскирующиеся под определённые действия пользователя
+на нашем сайте.
+Чтобы защититься от CSRF, сайт выдаёт специальный
+токен (строку из случайных символов), который передаётся
+обратно скрытым параметром POST из форм сайта.
+Обработчики POST-запросов проверяют наличие
+и правильность этого токена.
 
-In Lapis the token is a cryptographically signed message that the server can
-verify the authenticity of.
+Lapis использует криптографически подписанное сообщение
+в качестве токена. Сайт может убедиться в аутентичности
+токена.
 
-Before using any of the cryptographic functions it's important to set your
-application's secret. This is a string that only the application knows about.
-If your application is open source it's worthwhile to not commit this secret.
-The secret is set in [your configuration](#configuration-and-environments) like so:
+Перед использованием криптографии в Lapis
+надо изменить ключ приложения (строку, которую
+знает только приложение).
+Если исходный код проекта открыт, не стоит
+публиковать ключ приложения.
+Задайте значение ключа в
+[конфигурации](#configuration-and-environments):
 
 ```lua
 local config = require("lapis.config")
@@ -208,8 +229,7 @@ config "development", ->
   secret "this is my secret string 123456"
 ```
 
-Now that you have the secret configured, we might create a CSRF protected form
-like so:
+Пример формы, защищённой от CSRF:
 
 
 ```lua
@@ -254,10 +274,11 @@ class extends lapis.Application
   }
 ```
 
-> If you're using CSRF protection in a lot of actions then it might be helpful
-> to create a before filter that generates the token automatically.
+> Если надо защитить от CSRF много форм, имеет смысл создать
+> [предобработчик](moon_getting_started.html),
+> создающий CSRF-токен
 
-The following functions are part of the CSRF module:
+В модуле CSRF определены следующие функции:
 
 ```lua
 local csrf = require("lapis.csrf")
@@ -269,30 +290,37 @@ csrf = require "lapis.csrf"
 
 ###  `generate_token(req, key=nil, expires=os.time! + 28800)`
 
-Generates a new CSRF token using the session secret. `key` is an optional piece
-of data you can associate with the request. The token will expire in 8 hours by
-default.
+Создаёт CSRF-токен, используя ключ приложения.
+Чтобы прикрепить CSRF-токен к определённой форме,
+надо указать `key`, в таком случае токен будет
+действительным только в том случае, если то же значение
+`key` использовалось при проверке.
+По умолчанию токен имеет срок годности 8 часов.
 
 ###  `validate_token(req, key)`
 
-Valides the CSRF token located in `req.params.csrf_token`. If the token has a
-key it will be validated against `key`. Returns `true` if it's valid, or `nil`
-and an error message if it's invalid.
+Проверяет CSRF-токен `req.params.csrf_token`.
+Чтобы проверить токен в контексте определённой
+формы, укажите значеник `key` (каждой форме - свой `key`).
+Если CSRF-токен в порядке, возвращает `true`,
+иначе возвращает `nil` и сообщение об ошибке.
 
 ###  `assert_token(...)`
 
-First calls `validate_token` with same arguments, then calls `assert_error` if
-validation fails.
+Вызывает `validate_token` с теми же аргументами.
+Если токен не принимается, вызывает `assert_error`.
 
 
-## Making HTTP Requests
+## Внешние HTTP-запросы
 
-Lapis comes with a built-in module for making asynchronous HTTP requests. The
-way it works is by using the Nginx `proxy_pass` directive on an internal
-action. Because of this, before you can make any requests you need to modify
-your Nginx configuration.
+В Lapis есть встроенный модуль для совершения
+асинхронных HTTP-запросов.
+Этот модуль работает за счёт директивы Nginx `proxy_pass`,
+в которой определён внутренний location.
+Чтобы внешние HTTP-запросы работали,
+надо отредактировать конфигурацию Nginx.
 
-Add the following to your server block:
+Добавьте следующее в блок server:
 
 ```nginx
 location /proxy {
@@ -319,15 +347,17 @@ location /proxy {
 }
 ```
 
-> This code ensures that the correct headers are set for the new request. The
-> `$_url` variable is used to used to store the target URL. It must be defined
-> as `$_url=""` in your default location.
+> Этот код устанавливает правильные заголовки в новом запросе.
+> Целевой URL хранится в переменной `$_url`.
+> Чтобы всё работало, эту переменную надо объявить
+> в стандартном `location /`: `set $_url "";`
 
-Now we can use the `lapis.nginx.http` module. There are two methods. `request`
-and `simple`. `request` implements the Lua Socket HTTP request API (complete
-with LTN12).
+Теперь можно пользоваться модулем `lapis.nginx.http`.
+В модуле есть две функции: `request` и `simple`.
+Функция `request` реализует интерфейс
+запросов библиотеки Lua Socket (с LTN12).
 
-`simple` is a simplified API with no LTN12:
+Функция `simple` реализует более простой интерфейс (без LTN12):
 
 ```lua
 local http = require("lapis.nginx.http")
@@ -335,16 +365,17 @@ local http = require("lapis.nginx.http")
 local app = lapis.Application()
 
 app:get("/", function(self)
-  -- a simple GET request
+  -- простой запрос GET
   local body, status_code, headers = http.simple("http://leafo.net")
 
-  -- a post request, data table is form encoded and content-type is set to
+  -- запрос POST, таблица с данными кодируется
+  -- заголовок content-type устанавливается в
   -- application/x-www-form-urlencoded
   http.simple("http://leafo.net/", {
     name: "leafo"
   })
 
-  -- manual invocation of the above request
+  -- вызов того же запроса вручную
   http.simple({
     url = "http://leafo.net",
     method = "POST",
@@ -364,16 +395,17 @@ http = require "lapis.nginx.http"
 
 class extends lapis.Application
   "/": =>
-    -- a simple GET request
+    -- простой запрос GET
     body, status_code, headers = http.simple "http://leafo.net"
 
-    -- a post request, data table is form encoded and content-type is set to
+    -- запрос POST, таблица с данными кодируется
+    -- заголовок content-type устанавливается в
     -- application/x-www-form-urlencoded
     http.simple "http://leafo.net/", {
       name: "leafo"
     }
 
-    -- manual invocation of the above request
+    -- вызов того же запроса вручную
     http.simple {
       url: "http://leafo.net"
       method: "POST"
@@ -388,57 +420,63 @@ class extends lapis.Application
 
 ### `simple(req, body)`
 
-Performs an HTTP request using the internal `/proxy` location.
+Выполняет HTTP-запрос через внутренний location `/proxy`.
 
-Returns 3 values, the string result of the request, http status code, and a
-table of headers.
+Возвращает 3 результата: тело ответа, код состояния HTTP
+и таблицу заголовков.
 
-If there is only one argument and it is a string then that argument is treated
-as a URL for a GET request.
+Если передали один аргумент-строку, то она используется
+как URL для запроса GET.
 
-If there is a second argument it is set as the body of a POST request. If
-the body is a table it is encoded with `encode_query_string` and the
-`Content-type` header is set to `application/x-www-form-urlencoded`
+Второй аргумент, если есть, воспринимается как
+тело POST-запроса. Если второй аргумент - таблица,
+то он кодируется при помощи `encode_query_string`,
+а заголовок `Content-type` устанавливается в
+значение `application/x-www-form-urlencoded`.
 
-If the first argument is a table then it is used to manually set request
-parameters. It takes the following keys:
+Первый аргумент может быть таблицей опций:
 
- * `url` -- the URL to request
- * `method` -- `"GET"`, `"POST"`, `"PUT"`, etc...
- * `body` -- string or table which is encoded
- * `headers` -- a table of request headers to set
+ * `url` -- целевой URL запроса
+ * `method` -- `"GET"`, `"POST"`, `"PUT"`, и т.п.
+ * `body` -- строка или таблица (таблица кодируется)
+ * `headers` -- таблица заголовков запроса
 
 
 ### `request(url_or_table, body)`
 
-Implements a subset of [Lua Socket's
-`http.request`](http://w3.impa.br/~diego/software/luasocket/http.html#request).
+Частичная реализация [`http.request` из
+Lua Socket's](http://w3.impa.br/~diego/software/luasocket/http.html#request).
 
-Does not support `proxy`, `create`, `step`, or `redirect`.
+Не поддерживает `proxy`, `create`, `step`, и `redirect`.
 
-## Caching
+## Кеширование
 
-Lapis comes with a simple memory cache for caching the entire result of an
-action keyed on the parameters it receives. This is useful for speeding up the
-rendering of rarely changing pages because all database calls and HTML methods
-can be skipped.
+Результат обработчика можно полность закешировать,
+используя параметры обработчика как ключ кеша.
+Это помогает ускорить отображение страниц,
+которые редко меняются.
+Достать готовую страницу из кеша намного быстрее,
+чем запрашивать информацию из БД и генерировать HTML.
 
-The Lapis cache uses the [shared dictionary
-API](http://wiki.nginx.org/HttpLuaModule#lua_shared_dict) from HttpLuaModule.
-The first thing you'll need to do is create a shared dictionary in your Nginx
-configuration.
+Кеш хранится в словаре, разделяемом между
+всеми рабочими процессами Nginx. См. [shared dictionary
+API](http://wiki.nginx.org/HttpLuaModule#lua_shared_dict)
+(HttpLuaModule).
+Начнём с создания разделяемого словаря
+в конфигурации Nginx.
 
-Add the following to your `http` block to create a 15mb cache:
+Следующий код в блоке `http` создаёт кеш размером 15 Мб:
 
 ```nginx
 lua_shared_dict page_cache 15m;
 ```
 
-Now we are ready to start using the caching module, `lapis.cache`.
+Теперь мы можем использовать модуль, отвечающий за
+кеширование, `lapis.cache`.
 
 ### `cached(fn_or_tbl)`
 
-Wraps an action to use the cache.
+Оборачивает обработчик кешом.
 
 ```lua
 local lapis = require("lapis")
@@ -459,34 +497,39 @@ class extends lapis.Application
     "hello world!"
 ```
 
-The first request to `/hello/world` will run the action and store the result in
-the cache, all subsequent requests will skip the action and return the text
-stored in the cache.
+Первый запрос к `/hello/world` запустит обработчик,
+результат которого сохранится в кеше.
+Последующие запросы будут получать результат из кеша.
 
-The cache will remember not only the raw text output, but also the content
-type and status code.
+Кеш запоминает не только тело ответа, но токже
+заголовок Content-type и код состояния HTTP.
 
-The cache key also takes into account any GET parameters, so a request to
-`/hello/world?one=two` is stored in a separate cache slot. Multiple parameters
-are sorted so they can come in any order and still match the same cache key.
+Кеш учитывает параметры GET, поэтому запрос к
+`/hello/world?one=two` попадёт в другой слот кеша.
+Параметры GET сортируются, поэтому их порядок значения
+не имеет.
 
-When the cache is hit, a special response header is set to 1,
-`x-memory-cache-hit`. This is useful for debugging your application to make
-sure the cache is working.
+Попадание кеша фиксируется в заголовке ответа:
+`x-memory-cache-hit: 1`.
+При отладке приложения с помощью этого заголовка
+можно убедиться, что кеш работает.
 
-Instead of passing a function as the action of the cache you can also pass in a
-table. When passing in a table the function must be the first numerically
-indexed item in the table.
+Вместо функции в `cached` можно подать таблицу.
+Обработчик должен быть первым позиционным членом этой таблицы.
+В таблице можно переть следующие опции:
 
-The table supports the following options:
+* `dict_name` -- переопределить имя разделяемого словаря
+    (по умолчанию `"page_cache"`)
+* `exptime` -- время хранения записи кеша в секундах,
+    0 - вечно (по умолчанию 0)
+* `cache_key` -- переопределить функцию, генерирующую
+    ключ кеша (функция, которая используется по умолчанию,
+    описана выше)
+* `when` -- функция, возвращающая, должен ли запрос
+    быть закеширован. Получает запрос первым аргументом.
+    (Значение по умолчанию `nil`)
 
-* `dict_name` -- override the name of the shared dictionary used (defaults to `"page_cache"`)
-* `exptime` -- how long in seconds the cache should stay alive, 0 is forever (defaults to `0`)
-* `cache_key` -- set a custom function for generating the cache key (default is described above)
-* `when` -- a function that should return truthy a value if the page should be cached. Receives the request object as first argument (defaults to `nil`)
-
-For example, you could implement microcaching, where the page is cached for a
-short period of time, like so:
+Реализуем непродолжительное кеширование:
 
 ```lua
 local lapis = require("lapis")
@@ -515,8 +558,10 @@ class extends lapis.Application
 
 ### `delete(key, [dict_name="page_cache"])`
 
-Deletes an entry from the cache. Key can either be a plain string, or a tuple
-of `{path, params}` that will be encoded as the key.
+Удаляет запись кеша.
+Первым аргументом передаётся сам ключ
+или кортеж `{path, params}`, который будет закодирован
+в ключ.
 
 
 ```lua
@@ -531,11 +576,11 @@ cache.delete { "/hello", { thing: "world" } }
 
 ### `delete_all([dict_name="page_cache"])`
 
-Deletes all entires from the cache.
+Удаляет все записи кеша.
 
 ### `delete_path(path, [dict_name="page_cache"])`
 
-Deletes all entries for a specific path.
+Удаляет все записи кеша для определённого пути.
 
 ```lua
 local cache = require("lapis.cache")
@@ -547,13 +592,15 @@ cache = require "lapis.cache"
 cache.delete_path "/hello"
 ```
 
-## File Uploads
+## Загрузка файлов
 
-File uploads can be handled with a multipart form and accessing the file from
-the <span class="for_moon">`@params`</span><span
-class="for_lua">`self.params`</span> of the request.
+Загрузка файла осуществляется через
+составную форму (multipart form).
+Файл доступен в
+<span class="for_moon">`@params`</span>
+<span class="for_lua">`self.params`</span>.
 
-For example, let's create the following form:
+Код формы:
 
 ```moon
 import Widget from require "lapis.html"
@@ -569,9 +616,12 @@ class MyForm extends Widget
       input type: "submit"
 ```
 
-When the form is submitted, the file is stored as a table with `filename` and
-`content` properties in <span class="for_moon">`@params`</span><span
-class="for_lua">`self.params`</span> under the name of the form input:
+При отправке формы файл попадает в таблицу со свойствами
+`filename` и `content`.
+А эта таблица хранится в
+<span class="for_moon">`@params`</span>
+<span class="for_lua">`self.params`</span>,
+имя тега `<input>` из формы используется в качестве ключа.
 
 ```lua
 locl app = lapis.Application()
@@ -579,7 +629,7 @@ locl app = lapis.Application()
 app:post("/my_action", function(self)
   local file = @params.uploaded_file
   if file then
-    return "Uploaded: " .. file.filename .. ", " .. #file.content .. "bytes"
+    return "Загрузили: " .. file.filename .. ", " .. #file.content .. " байт"
   end
 end)
 ```
@@ -588,12 +638,11 @@ end)
 class extends lapis.Application
   "/my_action": =>
     if file = @params.uploaded_file
-      "Uploaded #{file.filename}, #{#file.content}bytes"
+      "Загрузили #{file.filename}, #{#file.content} байт"
 
 ```
 
-A validation exists for ensuring that a param is an uploaded file, it's called
-`is_file`:
+Убедимся, что в параметре хранится загруженный файл:
 
 ```lua
 local app = lapis.Application()
@@ -603,7 +652,7 @@ app:post("/my_action", function(self)
     { "uploaded_file", is_file: true }
   })
 
-  -- file is ready to be used
+  -- файл готов к использованию
 end)
 ```
 
@@ -614,19 +663,21 @@ class extends lapis.Application
       { "uploaded_file", is_file: true }
     }
 
-    -- file is ready to be used...
+    -- файл готов к использованию
 ```
 
-An uploaded file is loaded entirely into memory, so you should be careful about
-the memory requirements of your application. Nginx limits the size of uploads
-through the
-[`client_max_body_size`](http://wiki.nginx.org/HttpCoreModule#client_max_body_size)
-directive. It's only 1 megabyte by default, so if you plan to allow uploads
-greater than that you should set a new value in your Nginx configuration.
+Файл загружается в память целиком, что необходимо учитывать
+при расчёте требований приложения к памяти.
+Размер загружаемых файлов ограничен в Nginx в директиве
+[`client_max_body_size`](http://wiki.nginx.org/HttpCoreModule#client_max_body_size).
+Значение по умолчанию: 1 мегабайт.
+Если планируется загрузка файлов большего размера,
+надо увеличить её значение.
 
-## Application Helpers
+## Служебные функции приложения
 
-The following functions are part of the `lapis.application` module:
+В модуле `lapis.application` определены
+следующие функции:
 
 ```lua
 local app_helpers = require("lapis.application")
@@ -638,13 +689,17 @@ application = require "lapis.application"
 
 ### `fn = respond_to(verbs_to_fn={})`
 
-`verbs_to_fn` is a table of functions that maps a HTTP verb to a corresponding
-function. Returns a new function that dispatches to the correct function in the
-table based on the verb of the request. See
-[Handling HTTP verbs](#lapis-applications-handling-http-verbs)
+Принимает таблицу `verbs_to_fn`, сопоставляющую
+методы HTTP функциям-обработикам.
+Возвращает новый обработчик, который вызывает
+один из обработчиков из `verbs_to_fn` в зависимости
+от метода HTTP.
+См. раздел [обработка методов
+HTTP](#lapis-applications-handling-http-verbs)
 
-If an action for `HEAD` does not exist Lapis inserts the following function to
-render nothing:
+Если не определить обработчик для метода `HEAD`,
+то Lapis вставит следующую функцию, которая ничего
+не отображает:
 
 ```lua
 function() return { layout = false } end
@@ -654,21 +709,27 @@ function() return { layout = false } end
 -> { layout: false }
 ```
 
-If the request is a verb that is not handled then the Lua `error` function
-is called and a 500 page is generated.
+Если метод текущего запроса отсутствует в таблице,
+то Lapis вызывает функцию Lua `error` и
+отображает страницу 500.
 
-A special `before` key can be set to a function that should run before any
-other action. If <span class="for_moon">`@write`</span><span
-class="for_lua">`self.write`</span> is called inside the before function then
-the regular handler will not be called.
+Если установлен специальный ключ `before`,
+то сначала вызывается его обработчик, а потом
+обработчик метода HTTP.
+Если внутри обработчика `before` вызвали метод
+<span class="for_moon">`@write`</span>
+<span class="for_lua">`self.write`</span>,
+то обработчик метода HTTP отменяется.
 
 ### `safe_fn = capture_errors(fn_or_tbl)`
 
-Wraps a function to catch errors sent by `yield_error` or `assert_error`. See
-[Exception Handling][0] for more information.
+Оборачивает функцию для перехватки ошибок,
+порождённых `yield_error` и `assert_error`.
+См. раздел про [обработку ошибок][0].
 
-If the first argument is a function then that function is called on request and
-the following default error handler is used:
+Если первый аргумент - функция, то запрос передаётся в
+неё, а для обработки ошибок используется
+следующая функция:
 
 ```lua
 function() return { render = true } end
@@ -678,16 +739,20 @@ function() return { render = true } end
 -> { render: true }
 ```
 
-If a table is the first argument then the `1`st element of the table is used as
-the action and value of `on_error` is used as the error handler.
+Первый аргумент может быть таблицей. Обработчик находится
+в первом элементе таблицы, а обработчик ошибок - в элементе
+с ключом `on_error`.
 
-When an error is yielded then the <span class="for_moon">`@errors`</span><span
-class="for_lua">`self.errors`</span> variable is set on the current request and
-the error handler is called.
+Когда происходит ошибка, в текущем запросе
+устанавливается переменная
+<span class="for_moon">`@errors`</span>
+<span class="for_lua">`self.errors`</span>
+и вызывается обработчик ошибок.
 
 ### `safe_fn = capture_errors_json(fn)`
 
-A wrapper for `capture_errors` that passes in the following error handler:
+Обёртка для `capture_errors`, которая использует
+следующую функцию для обработки ошибок:
 
 ```lua
 function(self) return { json = { errors = self.errors } } end
@@ -699,18 +764,18 @@ function(self) return { json = { errors = self.errors } } end
 
 ### `yield_error(error_message)`
 
-Yields a single error message to be captured by `capture_errors`
+Порождает ошибку, которую ловит `capture_errors`
 
 ### `obj, msg, ... = assert_error(obj, msg, ...)`
 
-Works like Lua's `assert` but instead of triggering a Lua error it triggers an
-error to be captured by `capture_errors`
-
+Аналог функции Lua `assert`, который порождает
+ошибку, которую ловит `capture_errors`
 
 ### `wrapped_fn = json_params(fn)`
 
-Return a new function that will parse the body of the request as JSON and
-inject it into `@params` if the `content-type` is set to `application/json`.
+Возвращает новую функцию, которая читает JSON из тела
+запроса и размещает результаты в `@params`,
+если значение `content-type` равно `application/json`.
 
 ```lua
 local json_params = require("lapis.application").json_params
@@ -735,11 +800,12 @@ $ curl \
   'https://localhost:8080/json'
 ```
 
-The unmerged params can also be accessed from <span
-class="for_moon">`@json`</span><span class="for_lua">`self.json`</span>. If
-there was an error parsing the JSON then <span
-class="for_moon">`@json`</span><span class="for_lua">`self.json`</span> will be
-`nil` and the request will continue.
-
+Данные из JSON целиком доступны в
+<span class="for_moon">`@json`</span>
+<span class="for_lua">`self.json`</span>.
+Если при разборе JSON произошла ошибка, то в
+<span class="for_moon">`@json`</span>
+<span class="for_lua">`self.json`</span>
+будет лежать `nil`, а обработка запроса продолжится.
 
 [0]: exception_handling.html
