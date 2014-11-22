@@ -1042,15 +1042,16 @@ assert Users\create {
 выступает таблица, переданная в метод `create`.
 В случае обновления передаётся объект модели.
 
-### Pagination
+### Пагинация
 
-Using the `paginated` method on models we can easily paginate through a query
-that might otherwise return many results. The arguments are the same as the
-`select` method but instead of the result it returns a special `Paginator`
-object.
+Запрос, возвращающий слишком много результатов,
+можно разбить на страницы при помощи метода `paginated`.
+Аргументы те же, что у `select`, но вместо самого результата
+возвращает специальный объект `Paginator`.
 
-For example, say we have the following table and model: (For documentation on
-creating tables see the [next section](#database-schemas-creating-and-dropping-tables))
+Допустим, у нас есть следующие таблица и модель:
+(как создавать таблицы. см
+[следующий раздел](#database-schemas-creating-and-dropping-tables)):
 
 ```lua
 create_table("users", {
@@ -1078,7 +1079,7 @@ class Users extends Model
 
 ```
 
-We can create a paginator like so:
+Разобьем результаты на страницы:
 
 ```lua
 local paginated = Users:paginated("where group_id = ? order by name asc", 123)
@@ -1088,10 +1089,11 @@ local paginated = Users:paginated("where group_id = ? order by name asc", 123)
 paginated = Users\paginated [[where group_id = ? order by name asc]], 123
 ```
 
-A paginator can be configured by passing a table as the last argument.
-The following options are supported:
+Чтобы настроить пагинацию,
+надо передать таблицу опций последним аргументом.
+Есть следующие опции:
 
-`per_page`: sets the number of items per page
+`per_page`: устанавливает число объектов на странице
 
 ```moon
 local paginated_alt = Users:paginated("where group_id = ?", 4, { per_page = 100 })
@@ -1101,12 +1103,11 @@ local paginated_alt = Users:paginated("where group_id = ?", 4, { per_page = 100 
 paginated_alt = Users\paginated [[where group_id = ?]], 4, per_page: 100
 ```
 
-`prepare_results`: a function that is passed the results of `get_page` and
-`get_all` for processing before they are returned. This is useful for bundling
-preloading information into the paginator. The prepare function takes 1
-argument, the results, and it must return the results after they have been
-processed:
-
+`prepare_results`: функция, через которую "пропускаются"
+результаты методы `get_page` и `get_all` (см. ниже).
+Полезно для добавление какой-то информации в пагинатор.
+Функция `prepare_results` принимает список объектов
+и возвращает список обработанных объектов:
 
 ```lua
 local preloaded = Posts:paginated("where category = ?", "cats", {
@@ -1127,16 +1128,16 @@ preloaded = Posts\paginated [[where category = ?]], "cats", {
 }
 ```
 
-Any additional options sent to `paginated` are passed directly to the
-underlying `select` method call when a page is loaded. For example you can
-provide a `fields` option in order to limit the fields returned by a page.
+Все дополнительные аргументы отправляются в `select`.
+Например, можно передать опцию `fields`, чтобы ограничить
+набор загружаемых полей.
 
-The paginator has the following methods:
+У объекта-пагинатора есть следующие методы:
 
 #### `get_all()`
 
-Gets all the items that the query can return, is the same as calling the
-`select` method directly. Returns an array table of model instances.
+Возвращает полный список всех возможных объектов.
+То же, что вызов `select`.
 
 ```lua
 local users = paginated:get_all()
@@ -1152,9 +1153,11 @@ SELECT * from "users" where group_id = 123 order by name asc
 
 #### `get_page(page_num)`
 
-Gets `page_num`th page, where pages are 1 indexed. The number of items per page
-is controlled by the `per_page` option, and defaults to 10. Returns an array
-table of model instances.
+Возвращает страницу с номером `page_num` (список объектов),
+номера начинаются с 1.
+Число объектов на странице регулируется опцией `per_page`,
+значение по умолчанию 10.
+
 
 ```lua
 local page1 = paginated:get_page(1)
@@ -1173,12 +1176,13 @@ SELECT * from "users" where group_id = 123 order by name asc limit 10 offset 50
 
 #### `num_pages()`
 
-Returns the total number of pages.
+Возвращает число страниц.
 
 #### `total_items()`
 
-Gets the total number of items that can be returned. The paginator will parse
-the query and remove all clauses except for the `WHERE` when issuing a `COUNT`.
+Возвращает общее число объектов.
+Из запроса удаляются все части, кроме `WHERE`,
+добавляется `COUNT`.
 
 ```lua
 local users = paginated:total_items()
@@ -1194,9 +1198,9 @@ SELECT COUNT(*) as c from "users" where group_id = 123
 
 #### `each_page(starting_page=1)`
 
-Returns an iterator function that can be used to iterate through each page of
-the results. Useful for processing a large query without having the entire
-result set loaded in memory at once.
+Возвращает функцию-итератор, перебирающую объекты одной
+страницы. С помощью этой функции можно обработать
+много объектов, не загружая их в память одновременно.
 
 ```lua
 for page_results, page_num in paginated:each_page() do
@@ -1209,10 +1213,10 @@ for page_results, page_num in paginated\each_page!
   print(page_results, page_num)
 ```
 
-### Finding Columns
+### Получение списка полей таблицы
 
-You can get the column names and column types of a table using the `columns`
-method on the model class:
+Список полей таблицы можно получить с помощью
+метода `columns`
 
 ```lua
 local Posts = Model:extend("posts")
@@ -1233,10 +1237,12 @@ SELECT column_name, data_type
   FROM information_schema.columns WHERE table_name = 'posts'
 ```
 
-### Refreshing a Model Instance
+### Перезагрузка данных в объекте модели
 
-If your model instance becomes out of date from an external change, it can tell
-it to re-fetch and re-populate it's data using the `refresh` method.
+Данные в объекте модели могут устареть из-за
+внешних изменений записи в БД.
+Перечитать данные из БД можно при помощи
+метода модели `refresh`.
 
 ```moon
 class Posts extends Model
@@ -1254,8 +1260,8 @@ post:refresh()
 SELECT * from "posts" where id = 1
 ```
 
-By default all fields are refreshed. If you only want to refresh specific fields
-then pass them in as arguments:
+По умолчанию перезагружаются все поля модели.
+В аргументах можно указать набор полей:
 
 
 ```moon
@@ -1274,17 +1280,17 @@ post:refresh("color", "height")
 SELECT "color", "height" from "posts" where id = 1
 ```
 
-## Database Schemas
+## Структура БД
 
-Lapis comes with a collection of tools for creating your database schema inside
-of the `lapis.db.schema` module.
+В моделу `lapis.db.schema` есть инструменты для
+задания структуры БД.
 
-### Creating and Dropping Tables
+### Создание и удаление таблиц
 
 #### `create_table(table_name, { table_declarations... })`
 
-The first argument to `create_table` is the name of the table and the second
-argument is an array table that describes the table.
+Первый аргумент - имя таблицы.
+Второй аргумент - список, описывающий таблицу.
 
 ```lua
 local schema = require("lapis.db.schema")
@@ -1312,7 +1318,7 @@ create_table "users", {
 }
 ```
 
-This will generate the following SQL:
+Получился следующий SQL:
 
 ```sql
 CREATE TABLE IF NOT EXISTS "users" (
@@ -1322,23 +1328,29 @@ CREATE TABLE IF NOT EXISTS "users" (
 );
 ```
 
-The items in the second argument to `create_table` can either be a table, or a
-string. When the value is a table it is treated as a column/type tuple:
+Элементы списка, который передаётся вторым аргументом
+в `create_table`, могут быть таблицами или строками.
+Если элемент - таблица, то он воспринимается как
+кортеж (имя поля, тип поля):
 
     { column_name, column_type }
 
-They are both plain strings. The column name will be escaped automatically.
-The column type will be inserted verbatim after it is passed through
-`tostring`. `schema.types` has a collection of common types that can be used.
-For example, `schema.types.varchar` evaluates to `character varying(255) NOT
-NULL`. See more about types below.
+И то, и другое - строки. Имя поля экранируется автоматически.
+Тип поля пропускается через `tostring` и
+подставляется дословно.
+Частые типы собраны в `schema.types`.
+Например, `schema.types.varchar` превращается в
+`character varying(255) NOT NULL`.
+Подробную информацию о типах см. ниже.
 
-If the value to the second argument is a string then it is inserted directly
-into the `CREATE TABLE` statement, that's how we create the primary key above.
+Если на месте кортежа (поле, тип) стоит строка,
+то она подставляется в `CREATE TABLE` дословно.
+Мы пользовались этим выше, когда создавали
+первичный ключ.
 
 #### `drop_table(table_name)`
 
-Drops a table.
+Удаляет таблицу.
 
 ```lua
 schema.drop_table("users")
@@ -1354,20 +1366,22 @@ drop_table "users"
 DROP TABLE IF EXISTS "users";
 ```
 
-### Indexes
+### Индексы
 
 #### `create_index(table_name, col1, col2..., [options])`
 
-`create_index` is used to add new indexes to a table. The first argument is a
-table, the rest of the arguments are the ordered columns that make up the
-index. Optionally the last argument can be a Lua table of options.
+Функция `create_index` создаёт новый индекс таблицы.
+Первый аргумент - имя таблицы.
+Остальные аргументы - имена полей, на которых создаётся
+индекс.
+Последним аргументом можно передать таблицу с опциями.
 
-There are two options `unique: BOOL`, `where: clause_string`.
+Этот метод принимает две опции:
+`unique: BOOL`, `where: условие`.
 
-`create_index` will also check if the index exists before attempting to create
-it. If the index exists then nothing will happen.
+Если такой индекс уже есть, то ничего не происходит.
 
-Here are some example indexes:
+Примеры индексов:
 
 ```lua
 local create_index = schema.create_index
@@ -1389,7 +1403,7 @@ create_index "posts", "category", "title"
 create_index "uploads", "name", where: "not deleted"
 ```
 
-This will generate the following SQL:
+Соответствующий SQL:
 
 ```sql
 CREATE INDEX ON "users" (created_at);
@@ -1400,8 +1414,10 @@ CREATE INDEX ON "uploads" (name) WHERE not deleted;
 
 #### `drop_index(table_name, col1, col2...)`
 
-Drops an index from a table. It calculates the name of the index from the table
-name and columns. This is the same as the default index name generated by PostgreSQL.
+Удаляет индекс. Имя индекса вычисляется из имени таблицы
+и имён полей индекса.
+Имена генерируются так же, как их по умолчанию
+генерирует сам PostgreSQL.
 
 ```lua
 local drop_index = schema.drop_index
@@ -1417,18 +1433,18 @@ drop_index "users", "created_at"
 drop_index "posts", "title", "published"
 ```
 
-This will generate the following SQL:
+Соответствующий SQL:
 
 ```sql
 DROP INDEX IF EXISTS "users_created_at_idx"
 DROP INDEX IF EXISTS "posts_title_published_idx"
 ```
 
-### Altering Tables
+### Изменение структуры таблицы
 
 #### `add_column(table_name, column_name, column_type)`
 
-Adds a column to a table.
+Добавляет новое поле в таблицу.
 
 ```lua
 schema.add_column("users", "age", types.integer)
@@ -1440,7 +1456,7 @@ import add_column, types from schema
 add_column "users", "age", types.integer
 ```
 
-Generates the SQL:
+Соответствующий SQL:
 
 ```sql
 ALTER TABLE "users" ADD COLUMN "age" integer NOT NULL DEFAULT 0
@@ -1448,7 +1464,7 @@ ALTER TABLE "users" ADD COLUMN "age" integer NOT NULL DEFAULT 0
 
 #### `drop_column(table_name, column_name)`
 
-Removes a column from a table.
+Удаляет поле из таблицы.
 
 ```lua
 schema.drop_column("users", "age")
@@ -1460,7 +1476,7 @@ import drop_column from schema
 drop_column "users", "age"
 ```
 
-Generates the SQL:
+Соответствующий SQL:
 
 ```sql
 ALTER TABLE "users" DROP COLUMN "age"
@@ -1468,7 +1484,7 @@ ALTER TABLE "users" DROP COLUMN "age"
 
 #### `rename_column(table_name, old_name, new_name)`
 
-Changes the name of a column.
+Переименование поля таблицы.
 
 ```lua
 schema.rename_column("users", "age", "lifespan")
@@ -1480,7 +1496,7 @@ import rename_column from schema
 rename_column "users", "age", "lifespan"
 ```
 
-Generates the SQL:
+Соответствующий SQL:
 
 ```sql
 ALTER TABLE "users" RENAME COLUMN "age" TO "lifespan"
@@ -1488,7 +1504,7 @@ ALTER TABLE "users" RENAME COLUMN "age" TO "lifespan"
 
 #### `rename_table(old_name, new_name)`
 
-Changes the name of a table.
+Переименование таблицы.
 
 ```lua
 schema.rename_table("users", "members")
@@ -1500,19 +1516,20 @@ import rename_table from schema
 rename_table "users", "members"
 ```
 
-Generates the SQL:
+Соответствующий SQL:
 
 ```sql
 ALTER TABLE "users" RENAME TO "members"
 ```
 
-### Column Types
+### Типы колонок
 
-All of the column type generators are stored in `schema.types`. All the types
-are special objects that can either be turned into a type declaration string
-with `tostring`, or called like a function to be customized.
+Генераторы названий частых типов собраны в `schema.types`.
+Генератор названия можно конвертировать в строку
+при помощи `tostring` или вызвать как функцию
+(последний вариант используется для модифицирования типа).
 
-Here are all the default values:
+Значения по умолчанию:
 
 
 ```lua
@@ -1547,18 +1564,19 @@ types.time          --> timestamp without time zone NOT NULL
 types.varchar       --> character varying(255) NOT NULL
 ```
 
-You'll notice everything is `NOT NULL` by default, and the numeric types have
-defaults of 0 and boolean false.
+По умолчанию все типы помечены как `NOT NULL`,
+значения числовых типов установлены в `0`,
+а логического типа - в `false`.
 
-When a type is called like a function it takes one argument, a table of
-options. The options include:
+При вызове типа как функции в него передаётся единственный
+аргумент, таблица опций:
 
-* `default: value` -- sets default value
-* `null: boolean` -- determines if the column is `NOT NULL`
-* `unique: boolean` -- determines if the column has a unique index
-* `primary_key: boolean` -- determines if the column is the primary key
+* `default: value` -- значение по умолчанию
+* `null: boolean` -- является ли тип `NOT NULL`
+* `unique: boolean` -- является ли поле уникальным ключом
+* `primary_key: boolean` -- является ли поле первичным ключом
 
-Here are some examples:
+Примеры:
 
 ```lua
 types.integer({ default = 1, null = true })  --> integer DEFAULT 1
@@ -1574,15 +1592,17 @@ types.text null: true                 --> text
 types.varchar primary_key: true       --> character varying(255) NOT NULL PRIMARY KEY
 ```
 
-## Database Migrations
+## Миграции БД
 
-Because requirements typically change over the lifespan of a web application
-it's useful to have a system to make incremental schema changes to the
-database.
+В течение жизни веб-приложения требования к нему
+могут меняться, поэтому полезно иметь инструмент
+для расширения структуры БД
+(например, добавление полей, индексов).
 
-We define migrations in our code as a table of functions where the key of each
-function in the table is the name of the migration. You are free to name the
-migrations anything but it's suggested to give them Unix timestamps as names:
+Миграции - это таблица, переводящая имена миграций
+в "мигрирующие" функции. Имена миграций могут быть
+произвольными, однако принято использовать
+метки времени Unix в качестве имён:
 
 ```lua
 local schema = require("lapis.db.schema")
@@ -1610,24 +1630,25 @@ import add_column, create_index, types from require "lapis.db.schema"
 }
 ```
 
-A migration function is a plain function. Generally they will call the
-schema functions described above, but they don't have to.
+Мигрирующая функция - это обычная функция.
+В общем случае она может вызывать все функции,
+описанные выше, но обычно это не нужно.
 
-Only the functions that haven't already been executed will be called when we
-tell our migrations to run. The migrations that have already been run are
-stored in the migrations table, a database table that holds the names of the
-migrations that have already been run. Migrations are run in the order of their
-keys sorted ascending.
+Мигрирующие функции запускаются только один раз.
+Список имён применённых мигрирующих функций
+хранится в таблице миграций.
+Миграции запускаются в порядке возрастания их имён.
 
-### Running Migrations
 
-The Lapis command line tool has a special command for running migrations. It's
-called `lapis migrate`.
+### Запуск миграций
 
-This command expects a module called `migrations` that returns a table of
-migrations in the format described above.
+У программы `lapis` есть специальный режим
+для запуска миграций: `lapis migrate`.
 
-Let's create this file with a single migration as an example.
+Эта команда получает таблицу миграций
+в вышеописанном формате из модуля `migrations`.
+
+Пример модуля `migrations` с единственной миграцией:
 
 ```lua
 -- migrations.lua
@@ -1665,15 +1686,20 @@ import create_table, types from require "lapis.db.schema"
 }
 ```
 
-After creating the file, ensure that it is compiled to Lua and run `lapis
-migrate`. The command will first create the migrations table if it doesn't
-exist yet then it will run every migration that hasn't been executed yet.
+Если пишете на MoonScript, не забудьте скомпилировать этот
+файл в Lua.
+Затем запустите `lapis migrate`.
+Эта команда проверит наличие таблицы миграций
+и создаст её, если её нет.
+Затем она применит все миграции,
+которые не применялись прежде.
 
-Read more about [the migrate command](#command-line-interface-lapis-migrate).
+См. подробнее про
+[команду миграции](#command-line-interface-lapis-migrate).
 
-### Manually Running Migrations
+### Запуск миграций вручную
 
-We can manually create the migrations table using the following code:
+Таблицу миграций можно создать вручную:
 
 ```lua
 local migrations = require("lapis.db.migrations")
@@ -1685,7 +1711,7 @@ migrations = require "lapis.db.migrations"
 migrations.create_migrations_table!
 ```
 
-It will execute the following SQL:
+Соответствующий SQL:
 
 ```sql
 CREATE TABLE IF NOT EXISTS "lapis_migrations" (
@@ -1694,7 +1720,7 @@ CREATE TABLE IF NOT EXISTS "lapis_migrations" (
 );
 ```
 
-Then we can manually run migrations with the following code:
+Запускаем миграции:
 
 ```lua
 local migrations = require("lapis.db.migrations")

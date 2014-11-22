@@ -22,3 +22,11 @@ primary key - первичный ключ
 foreign key - внешний ключ
 
 fail - сорваться
+
+pagination - пагинация
+paginate - разбивать на страницы
+paginator - пагинатор
+Database Schema - структура БД
+
+incremental schema changes - расширение структуры БД
+migration function - мигрирующая функция
