@@ -1,38 +1,40 @@
-title: HTML Generation
+title: Генерация HTML
 --
 <div class="override_lang"></div>
 
-# HTML Generation
+# Генерация HTML
 
-This guide is focused on using builder syntax in Lua/MoonScript to generate
-HTML. If you're interested in a more traditional templating system see the
-[etlua Templates guide]($root/reference/etlua_templates.html).
+Рассмотрим генерацию HTML из кода на Lua/MoonScript.
+Генерация HTML из шаблонов рассматривается в
+разделе [etlua]($root/reference/etlua_templates.html).
 
-## HTML In Actions
+## Генерация HTML в обработчиках
 
-If we want to generate HTML directly in our action we can use the `@html`
-method:
+Чтобы сгенерировать HTML непосредственно в обработчике,
+используйте метод `@html`:
 
 ```moon
 "/": =>
   @html ->
     h1 class: "header", "Hello"
     div class: "body", ->
-      text "Welcome to my site!"
+      text "Привет!"
 ```
 
-HTML templates can be written directly as MoonScript (or Lua) code. This is a
-very powerful feature (inspired by [Erector](http://erector.rubyforge.org/))
-that gives us the ability to write templates with high composability and also
-all the features of MoonScript. No need to learn any goofy templating syntax
-with arbitrary restrictions.
+HTML записывается как код на MoonScript (или Lua).
+Это очень крутая возможность, вдохновлённая
+пакетом [Erector](http://erector.rubyforge.org/).
+Пользоваться удобнее, чем обычными шаблонами.
+(Не лапша-код!)
 
-The `@html` method overrides the environment of the function passed to it.
-Functions that create HTML tags are generated on the fly as you call them. The
-output of these functions is written into a buffer that is compiled in the end
-and returned as the result of the action.
+Метод `@html` переопределяет окружение для функции,
+которую в него подают.
+Функции, создающие HTML-теги, создаются на лету,
+когда их вызывают.
+Выдача этих функций склеивается вместе и возвращается
+как результат обработчика.
 
-Here are some examples of the HTML generation:
+Примеры генерации HTML:
 
 ```moon
 div!                -- <div></div>
@@ -53,28 +55,32 @@ div class: "header", ->             -- <div class="header"><h2>My Site</h2>
   p "Welcome!"
 ```
 
-The `element` function is a special builder that takes the name of tag to
-generate as the first argument followed by any attributes and content.
+С помощью функции `element` можно создать любой тег.
+Тег передаётся первым аргументом.
+В последующих аргументах передаются атрибуты и содержимое.
 
-The HTML builder methods have lower precedence than any existing variables, so
-if you have a variable named `div` and you want to make a `<div>` tag you'll need
-to call `element "div"`.
+Методы генератора HTML имеют меньший приоритет,
+чем существующие переменные, поэтому, если у вас есть
+переменная `div` и вам нужно создать тег `<div>`,
+воспользуйтесь `element "div"`.
 
-> If you want to create a `<table>` or `<select>` tag you'll need to use `element` because Lua
-> uses those names in the built-in modules.
+> Элементы `<table>` и `<select>` можно создать только при
+> помощи `element`, так как `table` и `select` являются
+> встроенными именами Lua.
 
-## HTML Widgets
+## HTML-виджеты
 
-The preferred way to write HTML is through widgets. Widgets are classes who are
-only concerned with outputting HTML. They use the same syntax as the `@html`
-helper shown above for writing HTML.
+Рекомендуется генерировать HTML через виджеты.
+Виджет - это класс, основное предназначение которого
+состоит в генерации HTML.
+В виджетах используется такой же синтаксис,
+как во вспомогательной функции `@html` (см. выше).
 
-When Lapis loads a widget automatically it does it by package name. For
-example, if it was loading the widget for the name `"index"` it would try to
-load the module `views.index`, and the result of that module should be the
-widget.
+Автоматическая загрузка виджета происходит через имя модуля.
+К примеру, виджет `"index"` загружается как модуль
+`views.index`. Модуль должен возвращать виджет.
 
-This is what a widget looks like:
+Вот как выглядит виджет:
 
 ```moon
 -- views/index.moon
@@ -88,32 +94,34 @@ class Index extends Widget
 ```
 
 
-> The name of the widget class is insignificant, but it's worth making one
-> because some systems can auto-generate encapsulating HTML named after the
-> class.
+> Имя виджета значения не имеет, но всё-таки стоит дать
+> ему осмысленное имя, так как некоторые системы
+> используют его при генерации HTML.
 
-### Rendering A Widget From An Action
+### Отображение виджета из обработчика
 
-The `render` option key is used to render a widget. For example you can render
-the `"index"` widget from our action by returning a table with render set to
-the name of the widget:
+Если обработчик передаёт имя виджета в ключе `render`
+в таблице, которую он возвращает, то Lapis отображает
+этот виджет.
+Пример: отображение виджета `"index"`:
 
 ```moon
 "/": =>
   render: "index"
 ```
 
-If the action has a name, then we can set render to `true` to load the widget
-with the same name as the action:
+Если у обработчика есть имя, то он может установить `render`
+в значение `true`, тогда отобразится виджет с тем же именем:
 
 ```moon
 [index: "/"]: =>
   render: true
 ```
 
-By default `views.` is appended to the front of the widget name and then loaded
-using Lua's `require` function. The `views` prefix can be customized by
-overwriting the `views_prefix` member of your application subclass:
+По умолчанию к имени виджета приписывается префикс `views.`,
+полученная строка передается в `require`.
+Этот префикс регулируется через статическое поле `views_prefix`
+класса приложения:
 
 ```moon
 class Application extends lapis.Application
@@ -123,10 +131,12 @@ class Application extends lapis.Application
   [home: "/home"]: => render: true
 ```
 
-### Passing Data To A Widget
+### Передача данных в виджет
 
-Any `@` variables set in the action can be accessed in the widget. Additionally
-any of the helper functions like `@url_for` are also accessible.
+Виджет имеет доступ ко всем переменным,
+установленным при помощи `@`.
+Вспомогательные функции тоже доступны
+(например, `@url_for`).
 
 ```moon
 -- web.moon
@@ -146,10 +156,11 @@ class Index extends Widget
       text "Welcome to my site!"
 ```
 
-### Rendering Widgets Manually
+### Отображение виджетов вручную
 
-Widgets can also be rendered manually by instantiating them and calling the
-`render` method.
+Чтобы отобразить виджет вручную, надо создать
+экземпляр класса этого виджета и вызвать на нём метод
+`render_to_string`:
 
 ```moon
 Index = require "views.index"
@@ -158,9 +169,10 @@ widget = Index page_title: "Hello World"
 print widget\render_to_string!
 ```
 
-If you want to use helpers like `@url_for` you also need to include them in the
-widget instance. Any object can be included as a helper, and it's methods will
-be made available inside of the widget.
+Если виджет использует вспомогательные методы
+(например, `@url_for`), их надо добавить в экземпляр виджета.
+Можно подключить любой объект, и его методы
+станут доступны из виджета.
 
 ```moon
 html = require "lapis.html"
@@ -175,17 +187,20 @@ class extends lapis.Application
     widget\render_to_string!
 ```
 
-You should avoid rendering widgets manually when possible. When in an action
-use the `render` [request option](#request-object-request-options). When in
-another widget use the `widget` helper function.
+Лучше избегать по возможноти ручного отображения виджетов.
+В обработчиках используйте
+[опцию запроса](#request-object-request-options) `render`.
+При отображении из других виджетов используйте
+вспомогательную функцию `widget`.
 
-## Layouts
+## Макеты
 
-Whenever an action is rendered normally the result is inserted into the
-current layout. The layout is just another widget, but it is used across many
-pages. Typically this is where you would put your `<html>` and `<head>` tags.
+Результат обработчика обычно вставляется в макет.
+Макет - это обычный виджет, но он используется
+многими страницами.
+В макете прописываются теги вроде `<html>` и `<head>`.
 
-Lapis comes with a default layout that looks like this:
+Макет по умолчанию устроен следующим образом:
 
 ```moon
 html = require "lapis.html"
@@ -197,19 +212,24 @@ class DefaultLayout extends html.Widget
       body -> @content_for "inner"
 ```
 
-Use this as a starting point for creating your own layout. The content of your
-page will be injected in the location of the call to `@content_for "inner"`.
+Используйте этот макет как отправную точку
+для написания собственного макета.
+Содержимое страницы подставляется в месте вызова
+`@content_for "inner"`.
 
-We can specify the layout for an entire application or specify it for a
-specific action. For example, if we have our new layout in `views/my_layout.moon`
+Макет можно задать всему приложению или конкретному
+обработчику.
+Предположим, что наш макет хранится в файле
+`views/my_layout.moon`.
 
 ```moon
 class extends lapis.Application
   layout: require "views.my_layout"
 ```
 
-If we want to set the layout for a specific action we can provide it as part of
-the action's return value.
+Чтобы задать этот макет этому обработчику,
+его надо передать из этого обработчика
+в опции `layout`.
 
 ```moon
 class extends lapis.Application
@@ -226,15 +246,17 @@ class extends lapis.Application
 
 ```
 
-As demonstrated in the example, passing false will prevent any layout from
-being rendered.
+Если значение макета равно `false`,
+то шаблон не отображается.
 
-## Widget Methods
+## Методы виджета
 
 ### `@@include(other_class)`
 
-Class method that copies the methods from another class into this widget.
-Useful for mixin in shared functionality across multiple widgets.
+Копирует все методы другого класса в класс, к которому его
+применили.
+Очень полезен для включения общей функциональности
+в несколько виджетов.
 
 ```moon
 class MyHelpers
@@ -254,13 +276,14 @@ class SomeWidget extends html.Widget
 
 ### `@content_for(name, [content])`
 
-`content_for` is used for sending HTML or strings from the view to the layout.
-You've probably already seen `@content_for "inner"` if you've looked at
-layouts. By default the content of the view is placed in the content block
-called `"inner"`.
+Включает HTML или строку в макет.
+Вызов `@content_for "inner"` упоминался выше
+при обсуждении макетов.
+По умолчанию содержимое представления
+размещается в блоке `"inner"`.
 
-You can create arbitrary content blocks from the view by calling `@content_for`
-with a name and some content:
+Можно создавать произвольные блоки при помощи `@content_for`,
+в который передаётся имя блока и его содержимое:
 
 ```moon
 class MyView extends Widget
@@ -272,10 +295,11 @@ class MyView extends Widget
 
 ```
 
-You can use either strings or builder functions as the content.
+В качестве содержимого можно использовать
+функции, генерирующие HTML, или строки.
 
-To access the content from the layout call `@content_for` without the content
-argument:
+Чтобы получить доступ к содержимому блоков из макета,
+надо вызвать `@content_for` с одним аргументом:
 
 ```moon
 class MyLayout extends Widget
@@ -289,9 +313,10 @@ class MyLayout extends Widget
         @content_for "footer"
 ```
 
-If a string is used as the value of a content block then it will be escaped
-before written to the buffer. If you want to insert a raw string then you can
-use a builder function in conjunction with the `raw` function:
+Если содержимое блока - строка, то она экранируется
+перед добавлением в буфер.
+Чтобы отключить экранирование строки,
+её надо передать в функцию `raw`:
 
 ```moon
 @content_for "footer", ->
@@ -300,7 +325,7 @@ use a builder function in conjunction with the `raw` function:
 
 ### `@has_content_for(name)`
 
-Checks to see if content for `name` is set.
+Возвращает, есть ли блок с именем `name`.
 
 ```moon
 class MyView extends Widget
@@ -312,7 +337,7 @@ class MyView extends Widget
         text "default content"
 ```
 
-## HTML Module
+## Модуль HTML
 
 ```moon
 html = require "lapis.html"
@@ -320,10 +345,11 @@ html = require "lapis.html"
 
 ### `render_html(fn)`
 
-Runs the function, `fn` in the HTML rendering context as described above.
-Returns the resulting HTML. The HTML context will automatically convert any
-reference to an undefined global variable into a function that will render the
-appropriate tag.
+Вызывает функцию `fn` в контексте HTML
+(см. выше) и возвращает полученный HTML.
+В контексте HTML обращение к несуществующей
+глобальной переменной заменяется вызовом функции,
+отображающей соответствующей тег.
 
 ```moon
 import render_html from require "lapis.html"
@@ -335,7 +361,7 @@ print render_html ->
 
 ### `escape(str)`
 
-Escapes any HTML special characters in the string. The following are escaped:
+Экранирует специальные символы HTML в строке:
 
  * `&` -- `&amp;`
  * `<` -- `&lt;`
