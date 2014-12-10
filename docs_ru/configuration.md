@@ -1,32 +1,39 @@
 title: Configuration and Environments
 --
-# Configuration and Environments
+# Конфигурации и окружения
 
-Lapis is designed to run your server in different configurations called
-environments. For example you might have a development configuration with a
-local database URL, code caching disabled, and a single worker. Then you might
-have a production configuration with remote database URL, code caching enabled,
-and 8 workers.
+Сервер Lapis можно запускать в разных окружениях
+(конфигурациях).
+К примеру, есть отладочная конфигурация, в которой используется
+локальная БД, отключено кеширование кода и запущен
+только один рабочий процесс.
+А ещё есть "боевая" конфигурация, в которой используется
+удалённая БД, включено кеширование кода и запущено
+8 рабочих процессов.
 
-The `lapis` command line tool takes a second argument when starting the server:
+При запуске сервера можно передать второй аргумент, название
+конфигурации:
 
 ```bash
 $ lapis server [environment]
 ```
 
-By default the environment is `development`. The environment name only affects
-what configuration is loaded. This has absolutely no effect if you don't have any
-configurations, so let's create some.
+Окружение по умолчанию: `development`.
+Название окружения влияет только на то, какая конфигурация
+будет загружена.
+Если вы не определили ни одной конфигурации, то
+этот аргумент ни на что не влияет.
 
-## Creating Configurations
+## Создание конфигурации
 
-Whenever Lapis executes code that depends on a configuration it attempts to
-load the module `"config"`.  The `"config"` module is where we define our
-environment specific variables. It's a standard Lua/MoonScript file, so let's
-create it.
+При выполнении кода, зависящего от конфигурации Lapis
+загружает модуль `"config"`, в котором хранятся
+опции конфигурации.
+Это обычный модуль Lua/MoonScript.
+Давайте его создадим.
 
-> If the `config` module is not found no error is thrown, and only the default
-> configuration is available.
+> Если модуль `config` отсутствует, то загружается
+> конфигурация по умолчанию (ошибок не происходит).
 
 ```lua
 local config = require("lapis.config")
@@ -58,16 +65,16 @@ config "production", ->
 
 ```
 
-We use the configuration helpers provided in `"lapis.config"` to create our
-configurations. This defines a domain specific language for setting variables.
-In the example above we define two configurations, and set the ports for each
-of them.
+В примере, приведённом выше, определяются две конфигурации,
+в которых сервер запускается на различных портах.
 
-A configuration is just a plain table. Use the special builder syntax above to
-construct the configuration tables.
+Конфигурация хранится в обычной таблице.
+Для создания конфигураций используются вспомогательные
+функции из модуля `"lapis.config"`.
 
-We can configure multiple environments at once by passing in an array table for
-evironment names:
+Опции можно присваивать
+сразу нескольким конфигурациям, для этого нужно передать
+список этих конфигураций первым аргументом:
 
 ```lua
 config({"development", "production"}, {
@@ -80,21 +87,23 @@ config {"development", "production"}, ->
   session_name "my_app_session"
 ```
 
-The configuration file has access to a nice syntax for combining nested
-tables. Both MoonScript and Lua have their own variations, for more details
-about the syntax have a look at the respective guide.
+В файле конфигурации можно использовать вложенные таблицы.
+У Lua и MoonScript есть свои особенности,
+см. следующие разделы.
 
 * [MoonScript configuration syntax][0]
 * [Lua configuration syntax][0]
 
-## Configurations and Nginx
+## Конфигурация Nginx
 
-The values in the configuration are used when compiling `nginx.conf`.
-Interpolated Nginx configuration variables are case insensitive. They are
-typically written in all capitals because the shell's environment is checked
-for a value before the configuration is checked.
+Опции конфигурации используются при сборке
+`nginx.conf`.
+Они регистронезависимые.
+Обычно имена опций записываются большими буквами,
+потому что переменные окружения shell имеют приоритет
+над опциями конфигурации.
 
-For example, here's a chunk of an Lapis Nginx configuration:
+Фрагмент конфигурации Nginx:
 
 ```nginx
 events {
@@ -102,18 +111,20 @@ events {
 }
 ```
 
-When this is compiled, first the environment variable
-`LAPIS_WORKER_CONNECTIONS` is checked. If it doesn't have a value then the
-configuration of the current environment is checked for `worker_connections`.
+При компиляции этой конфигурации Nginx сначала
+проверяется переменная окружения shell
+`LAPIS_WORKER_CONNECTIONS`.
+Если этой переменной не присвоено значение,
+используется опция `worker_connections` текущей конфигурации.
 
-## Accessing Configuration From Application
+## Чтение опций конфигурации из приложения
 
-The configuration is also made available in the application. We can get access
-to the configuration table like so:
+Пример кода, получающего доступ к таблице
+опций конфигурации:
 
 ```lua
 local config = require("lapis.config").get()
-print(config.port) -- shows the current port
+print(config.port) -- выводит текущий порт
 ```
 
 
@@ -122,21 +133,19 @@ config = require("lapis.config").get!
 print config.port -- shows the current port
 ```
 
-The name of the environment is stored in `_name`.
+Имя конфигурации хранится в опции `_name`.
 
 ```lua
-print(config._name) -- development, production, etc...
+print(config._name) -- development, production, и т.п.
 ```
 
 ```moon
-print config._name -- development, production, etc...
+print config._name -- development, production, и т.п.
 ```
 
-## Default Configuration Values
+## Опции конфигурации по умолчанию
 
-All configurations come with some default values, these are them in table
-syntax:
-
+Таблица значений опций конфигурации по умолчанию:
 
 ```lua
 default_config = {
@@ -165,23 +174,31 @@ default_config = {
 ```
 
 
-## Available Configuration Values
+## Доступные опции конфигурации
 
-Althought most coniguration keys are free for any use, some names are reserved
-for configuring Lapis and supporting libraries. Here is a list of them:
+Некоторые опции конфигурации зарезервированы для Lapis
+и вспомогательных библиотек:
 
-* `port` (`number`) -- The port of Nginx, defined in default `nginx.conf`
-* `num_workers` (`number`) -- The number of workers to launch for Nginx, defined in default `nginx.conf`
-* `session_name` (`string`) -- The name of the cookie where the [session]($root/reference/actions.html#request-object-session) will be stored
-* `secret` (`string`) -- Secret key used by `encode_with_secret`, also used for signing session cookie
-* `measure_performance` (`bool`) -- Used to enable performance time and query tracking
-* `logging` (`table`) -- Configure which events to log to console or log files
+* `port` (`number`) -- порт Nginx (файл `nginx.conf`)
+* `num_workers` (`number`) -- число рабочих процессов
+    Nginx (файл `nginx.conf`)
+* `session_name` (`string`) -- имя Cookie, в котором хранится
+    [сессия
+    ]($root/reference/actions.html#request-object-session)
+* `secret` (`string`) -- секретный ключ, используемый
+    функцией `encode_with_secret`; этим же ключом подписывается
+    Cookie, в котором хранится сессия
+* `measure_performance` (`bool`) -- включает отслеживание
+    быстродействия (времени работы обработчиков и
+    запросов к БД)
+* `logging` (`table`) -- определяет, какие события
+    выводить на консоль или в логи
 
+## Настройка логгирования
 
-## Configuring Logging
-
-The `logging` configuration key can be used to disable the various logging that
-Lapis does by default. The default value of the logging configuration is:
+Опция конфигурации `logging` определяет,
+какие события попадают в логи.
+По умолчанию эта опция имеет следующее значение:
 
 ```lua
 {
@@ -197,13 +214,16 @@ Lapis does by default. The default value of the logging configuration is:
 }
 ```
 
-All logging is done to Nginx's notice log using the `print` function provided
-by OpenResty. The default notice logging location is set to `stderr`, specified
-in the default Lapis Nginx configuration. It can configured using the
+Всё логгирование идёт в лог notice Nginx'а
+при помощи функции `print` из OpenResty.
+По умолчанию Nginx пишет сообщения notice в `stderr`.
+Это место контролируется директивой Nginx
 [`error_log`
-directive](http://nginx.org/en/docs/ngx_core_module.html#error_log).
+](http://nginx.org/en/docs/ngx_core_module.html#error_log).
 
-## Performance Measurement
+## Измерение быстродействия
+
+
 
 Lapis can collect timings and counts for various actions if the
 `measure_performance` configuration value is set to true.
