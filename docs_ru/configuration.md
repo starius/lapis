@@ -223,30 +223,31 @@ default_config = {
 
 ## Измерение быстродействия
 
+Если установить значение `measure_performance` в true, то Lapis
+будет собирать данные по количеству событий
+разных типов и затраченному времени в течение текущего запроса.
 
+Данные хранятся в таблице `ngx.ctx.performance`.
+У этой таблицы есть следующие поля:
 
-Lapis can collect timings and counts for various actions if the
-`measure_performance` configuration value is set to true.
+* `view_time` -- время, затраченное на отображение представления (с)
+* `layout_time` -- время, затраченное на отображение макета (с)
+* `db_time` -- время, затраченное на запросы к БД (с)
+* `db_count` -- число запросов к БД
+* `http_time` -- время, потраченное на выполнение запросов HTTP,
+    инициированных сайтом (с)
+* `http_count` -- число запросов HTTP, инициированных сайтом
 
-The data is stored in `ngx.ctx.performance`. The following fields are collected
-in a table:
+Если поле в таблице отсутствует (равно `nil`), значит действия
+соответствующего типа не совершались.
+Таблица заполняется в течение всего запроса, поэтому
+лучше всего брать из неё данные в самом конце,
+чтобы учесть все действия.
+При помощи функции `after_dispatch` можно задать функцию,
+выполняемую в самом конце обработки запроса.
 
-* `view_time` -- Time in seconds spent rendering view
-* `layout_time` -- Time in seconds spent rendering layout
-* `db_time` -- Time in seconds spent executing queries
-* `db_count` -- The number of queries executed
-* `http_time` -- Time in seconds spent executing HTTP requests
-* `http_count` -- The number of HTTP requests sent
-
-A field will be `nil` if no corresponding action was done in the request. The
-fields are filled out over the course of the request so it's best to only access
-them at the very end of the request to ensure all the data is available. The
-`after_dispatch` helper can be used to register a function to run at the very
-end of processing a request.
-
-In this example the performance data is printed to the log at the end of every
-request:
-
+Пример: информация о быстродействии печатается в журнал
+после каждого запроса:
 
 ```lua
 local lapis = require("lapis")
