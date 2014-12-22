@@ -1,43 +1,47 @@
 title: etlua Templates
 --
 
-# `etlua` Templates
+# Шаблоны `etlua`
 
-[`etlua`][1] is a templating language that lets you render the result of Lua
-code inline in a template file to produce a dynamic output. In Lapis we use
-`etlua` to render dynamic content inside of HTML templates.
+[`etlua`][1] - язык шаблонов, в который можно встраивать
+код на Lua для получения динамического содержимого.
+`etlua` используется в `Lapis` отображения HTML-шаблонов.
 
-`etlua` files use the `.etlua` extension. Lapis knows how to load those types
-of files automatically using Lua's `require` function after you've enable
-`etlua`
+Шаблоны `etlua` хранятся в файлах с расширением `.etlua`.
+Чтобы файлы `.etlua` загружались прозрачно, как обычные
+модули Lua, надо включить `etlua` в Lapis.
 
-For example, here's a simple template that renders a random number:
+Этот шаблон выводит случайное число:
 
 ```html
 <!-- views/hello.etlua -->
 <div class="my_page">
-  Here is a random number: <%= math.random() %>
+  Случайное число: <%= math.random() %>
 </div>
 ```
 
-`etlua` comes with the following tags for injecting Lua into your templates:
+В `etlua` есть следующие теги для включения Lua:
 
-* `<% lua_code %>` runs Lua code verbatim
-* `<%= lua_expression %>` writes result of expression to output, HTML escaped
-* `<%- lua_expression %>` same as above but with no HTML escaping
+* `<% lua_code %>` запускает Lua-код как есть
+* `<%= lua_expression %>` вставляет результат выражения,
+    HTML экранируется
+* `<%- lua_expression %>` то же, но HTML не экранируется
 
+## Отображение из обработчиков
 
-## Rendering From Actions
+*Обработчик* - это функция, которая обрабатывает запросы,
+соответствующие определённому пути.
+Обработчик выполняет бизнес-логику и подготавливает данные
+для представления.
+Обработчик возвращает таблицу опций, которая управляет
+отображением результата.
 
-An *action* is a function that handles a request that matches a particular
-route. An action should perform logic and prepare data before forwarding to a
-view or triggering a render. Actions can control how the result is rendered by
-returning a table of options.
-
-The `render` option of the return value of an action lets us specify which
-template to render after the action is executed. If we place an `.etlua` file
-inside of the views directory, `views/` by default, then we can render a
-template by name like so:
+Опция `render` из возвращаемой таблицы определяет,
+какой шаблон будет отображаться.
+Чтобы вывести файл `.etlua`, надо указать его имя
+без расширения.
+Файлы `.etlua` находятся в папке представлений
+(по умолчанию `views/`).
 
 
 ```lua
@@ -63,13 +67,14 @@ class App extends lapis.Application
 ```
 
 
-Rendering `"hello"` will cause the module `"views.hello"` to load, which will
-resolve our `etlua` template located at `views/hello.etlua`
+Отображение `"hello"` приводит к загрузке модуля
+`"views.hello"`, то есть файла `views/hello.etlua`.
 
-Because it's common to have a single view for every (or most actions) you can
-avoid repeating the name of the view when using a named route. A named route's
-action can just set `true` to the `render` option and the name of the route
-will be used as the name of the template:
+Обычно каждый обработчик выводит своё представление.
+Чтобы не писать каждый раз имя представления,
+можно задать опции `render` значение `true`.
+В таком случае в качестве имени шаблона будет использоваться
+имя пути (в примере `index`):
 
 
 ```lua
@@ -97,16 +102,16 @@ class App extends lapis.Application
 ```html
 <!-- views/index.etlua -->
 <div class="index">
-  Welcome to the index of my site!
+  Добро пожаловать!
 </div>
 ```
 
 
-### Passing Values to Views
+### Передача переменных в представления
 
-Values can be passed to views by setting them on `self` in the action. For
-example we might set some state for a template like so:
-
+Чтобы передать переменные в шаблон, надо записать их в поля
+первого аргумента обработчика (`self`).
+Пример передачи состояния в шаблон:
 
 ```lua
 app:match("/", function(self)
@@ -132,48 +137,50 @@ class App extends lapis.Application
 </ul>
 ```
 
-You'll notice that we don't need to refer scope the values with `self` when
-retrieving their values in the template. Any variables are automatically looked
-up in that table by default.
+Примечательно, к переменным обращаются по их имени,
+без `self`. Все несуществующие переменные берутся
+из таблицы `self`.
 
+## Вызов вспомогательных функций из шаблонов
 
-## Calling Helper Functions from Views
-
-Helper functions can be called just as if they were in scope when inside of a
-template. A common helper is the `url_for` function which helps us generate a
-URL to a named route:
+Вспомогательные функции можно вызывать, как будто они
+находятся в области видимости.
+Примером вспомогательной функции служит функция `url_for`,
+которая возвращает имя пути по URL:
 
 ```html
 <!-- views/about.etlua -->
 <div class="about_page">
-  <p>This is a great page!</p>
+  <p>Замечательная страница!</p>
   <p>
-    <a href="<% url_for("index") %>">Return home</a>
+    <a href="<% url_for("index") %>">Перейти на домашнюю</a>
   </p>
 </div>
 ```
 
-Any method available on the request object (`self` in an action) can be called
-in the template. It will be called with the correct receiver automatically.
+Любой метод объекта-запроса (известного обработчикам
+под именем `self`) можно вызвать в шаблоне,
+как глобальную функцию.
 
-Additionally `etlua` templates have a couple of helper functions only defined in
-the context of the template. They are covered below.
+В `etlua` определено ещё несколько функций. См. ниже.
 
 
-## Rendering Sub-templates
+## Отображение подшаблонов
 
-A sub-template is a template that is rendered inside of another template. For example
-you might have a common navigation across many pages so you would create a
-template for the navigation's HTML and include it in the templates that require
-a navigation.
+Подшаблон - это шаблон, отображаемый внутри другого
+шаблона. Допустим, на многих страницах сайта
+используется один и тот же блок навигации.
+Чтобы не дублировать код в каждом шаблоне,
+надо создать подшаблон с блоком навигации,
+подключаемый в других шаблонах.
 
-To render a sub-template you can use the `render` helper function:
+Чтобы отобразить подшаблон, используется функция `render`.
 
 ```html
 <!-- views/navigation.etlua -->
 <div class="nav_bar">
-  <a href="<% url_for("index") %>">Home</a>
-  <a href="<% url_for("about") %>">About</a>
+  <a href="<% url_for("index") %>">Домой</a>
+  <a href="<% url_for("about") %>">О сайте</a>
 </div>
 ```
 
@@ -184,19 +191,21 @@ To render a sub-template you can use the `render` helper function:
 </div>
 ```
 
-Note that you have to type the full module name of the template for the first
-argument to require, in this case `"views.navigation"`, which points to
-`views/navigation.etlua`. If you happen to also be using MoonScript templates
-you can also include them using the `render` function.
+Надо писать полное имя модуля, в котором находится подшаблон
+(в данном случае `"views.navigation"`, который
+соответствует `views/navigation.etlua`).
+Если генераторы HTML на MoonScript тоже используются,
+их тоже можно подключать через `render`.
 
-Any values and helpers available in the parent template are also available in
-the sub-template.
+Все переменные и вспомогательные функции, доступные шаблону,
+доступны также и подшаблону.
 
-Somtimes you need to pass data to a sub-template that's generated during the
-execution of the parent template. `require` takes a second argument of values
-to pass into the sub-template.
+Чтобы передать в подшаблон переменные, созданные
+в шаблоне, их надо передавать во втором аргументе
+функции `render`.
 
-Here's a contrived example of using a sub-template to render a list of numbers:
+Искусственный пример использования подшаблонов для
+отображения списка чисел:
 
 ```html
 <!-- templates/list_item.etlua -->
@@ -214,9 +223,11 @@ Here's a contrived example of using a sub-template to render a list of numbers:
 </div>
 ```
 
-## View Helper Functions
+## Вспомогательные функции представлений
 
-* `render(template_name, [template_params])` -- loads and renders a template
-* `widget(widget_instance)` -- renders and instance of a `Widget`
+* `render(template_name, [template_params])` -- загружает
+    и отображает шаблон
+* `widget(widget_instance)` -- инстанцирует и
+    отображает `Widget`
 
 [1]: https://github.com/leafo/etlua
