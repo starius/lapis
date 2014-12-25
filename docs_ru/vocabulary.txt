@@ -38,3 +38,5 @@ key-value table - таблица ключ-значение
 
 CSRF token - CSRF-токен
 Nginx directive - директива Nginx
+
+validator - проверка

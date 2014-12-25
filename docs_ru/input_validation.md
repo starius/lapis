@@ -1,11 +1,11 @@
 title: Input Validation
 --
-# Input Validation
+# Проверка пользовательского ввода
 
-## Example Validation
+## Пример проверки
 
-Lapis comes with a set of validators for working with external inputs. Here's a
-quick example:
+В Lapis есть набор инструментов для проверки пользовательского ввода.
+Пример простой валидации:
 
 ```lua
 local lapis = require("lapis")
@@ -22,7 +22,7 @@ app:match("/create-user", capture_errors(function(self)
     { "password", exists = true, min_length = 2 },
     { "password_repeat", equals = self.params.password },
     { "email", exists = true, min_length = 3 },
-    { "accept_terms", equals = "yes", "You must accept the Terms of Service" }
+    { "accept_terms", equals = "yes", "Вы должны согласиться с Условиями" }
   })
 
   create_the_user(self.params)
@@ -46,52 +46,56 @@ class App extends lapis.Application
       { "password", exists: true, min_length: 2 }
       { "password_repeat", equals: @params.password }
       { "email", exists: true, min_length: 3 }
-      { "accept_terms", equals: "yes", "You must accept the Terms of Service" }
+      { "accept_terms", equals: "yes", "Вы должны согласиться с Условиями" }
     }
 
     create_the_user @params
     render: true
 ```
 
-`assert_valid` takes two arguments, a table to be validated, and a second array
-table with a list of validations to perform. Each validation is the following format:
+`assert_valid` принимает два аргумента: проверяемую таблицу
+и таблицу с применяемыми проверками.
+Проверка - это таблица следующего вида:
 
-    { Validation_Key, [Error_Message], Validation_Function: Validation_Argument, ... }
+    { Проверяемый_ключ, [Сообщение_об_ошибке], Проверяющая_функция: Аргумент, ... }
 
-`Validation_Key` is the key to fetch from the table being validated.
+`Проверяемый_ключ` - ключ в проверямой таблице.
 
-Any number of validation functions can be provided. If a validation function
-takes multiple arguments, an array table can be passed
+Можно передать любое количество проверяющих функций.
+Если проверяющая функция принимает несколько аргументов,
+их передают в таблице (списке).
 
-`Error_Message` is an optional second positional value. If provided it will be
-used as the validation failure error message instead of the default generated
-one. Because of how Lua tables work, it can also be provided after the
-validation functions as demonstrated in the example above.
+`Сообщение_об_ошибке` - необязательный позиционный элемент, содержащий
+сообщение об ошибке, которое будет использоваться вместо стандартного
+сообщения об ошибке.
+В связи с устройством таблиц Lua, его можно указать
+после проверяющих функций (см. пример выше).
 
-## Validation Functions
+## Проверяющие функции
 
-* `exists: true` -- check if the value exists and is not an empty string
-* `file_exists: true` -- check if the value is a file upload
-* `min_length: Min_Length` -- value must be at least `Min_Length` chars
-* `max_length: Max_Length` -- value must be at most `Max_Length` chars
-* `is_integer: true` -- value matches integer pattern
-* `is_color: true` -- value matches CSS hex color (eg. `#1234AA`)
-* `is_file: true` -- value is an uploaded file, see [File Uploads][0]
-* `equals: String` -- value is equal to String
-* `type: String` -- type of value is equal to String
-* `one_of: {A, B, C, ...}` -- value is equal to one of the elements in the array table
+* `exists: true` -- проверяет, что значение определено и не равно пустой строке
+* `min_length: Min_Length` -- значение включает не менее `Min_Length` символов
+* `max_length: Max_Length` -- значение включает не более `Max_Length` символов
+* `is_integer: true` -- значение можно преобразовать в число
+* `is_color: true` -- значение - цвет в hex-коде (пример: `#1234AA`)
+* `is_file: true` -- значение - загруженный файл, см. [Загрузки файлов][0]
+* `equals: Строка` -- значение равно Строке
+* `type: Строка` -- тип значения равен Строке
+* `one_of: {A, B, C, ...}` -- значение равно одному из элементов таблицы
+* `file_exists: true` -- значение - загруженный файл, см. [Загрузки файлов][0]
+    (устаревшее, используйте `is_file`)
 
 
-## Creating a Custom Validator
+## Определение произвольной проверки
 
-Custom validators can be defined like so:
+Пример определения произвольной проверки
 
 ```lua
 local validate = require("lapis.validate")
 
 validate.validate_functions.integer_greater_than = function(input, min)
   local num = tonumber(input)
-  return num and num > min, "%s must be greater than " .. min
+  return num and num > min, "%s должно быть больше, чем " .. min
 end
 
 local app_helpers = require("lapis.application")
@@ -111,7 +115,7 @@ import validate_functions, assert_valid from require "lapis.validate"
 
 validate_functions.integer_greater_than = (input, min) ->
   num = tonumber input
-  num and num > min, "%s must be greater than #{min}"
+  num and num > min, "%s должно быть больше, чем #{min}"
 
 import capture_errors from require "lapis.application"
 
@@ -122,9 +126,9 @@ class App extends lapis.Application
     }
 ```
 
-## Manual Validation
+## Ручная проверка
 
-In addition to `assert_valid` there is one more useful validation function:
+Помимо `assert_valid` есть ещё одна полезная функция валидации:
 
 ```moon
 local validate = require("lapis.validate").validate
@@ -134,7 +138,7 @@ local validate = require("lapis.validate").validate
 import validate from require "lapis.validate"
 ```
 
-* `validate(object, validation)` -- takes the same exact arguments as
-  `assert_valid`, but returns either errors or `nil` on failure instead of
-  yielding the error.
+* `validate(object, validation)` -- принимает такие же же аргументы,
+  как `assert_valid`, но не выкидывает ошибку, а возвращает `nil`
+  или сообщения об ошибках.
 
