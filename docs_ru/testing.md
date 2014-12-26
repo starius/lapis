@@ -1,34 +1,37 @@
 title: Testing
 --
-# Testing
+# Тестирование
 
-Lapis comes with utilities for handling two types of testing.
+В Lapis есть две системы тестирования.
 
-The first type is request mocking. Mocking a request simulates a HTTP request
-to your application, bypassing any real HTTP requests and Nginx. The advantage
-of this method is that it's faster and errors happen within the test process.
+Первая система включает имитацию запросов, которые попадают
+в приложение, минуя Nginx и реальные HTTP-запросы.
+Преимущество такого подхода в скорости и в том, что все ошибки
+происходят внутри процесса теста.
 
-The second type uses the test server. The test server is a temporary Nginx
-server spawned for the duration of your tests that allows you to issue full
-HTTP requests. The advantage is you can test both Nginx configuration and your
-application at the same time. It very closely resembles how your application
-will run in production.
+Вторая система тестирования - это отдельный сервер Nginx для
+тестирования. Такой подход использует полноценные
+HTTP-запросы и проверяет одновременно конфигурацию Nginx
+и код приложения.
+Такой сервер очень похож на реальный сайт, запущенный
+в боевых условиях.
 
-You are free to use any testing framework you like, but in these examples we'll
-be using [Busted](http://olivinelabs.com/busted/).
+Тесты можно писать в любом фреймворке,
+мы будем использовать [busted](http://olivinelabs.com/busted/)
+в примерах.
 
-## Mocking a Request
+## Имитация запроса
 
-In order to test your application it should be a Lua module that can be
-`require`d without any side effects. Ideally you'll have a separate file for
-each application and you can get the application class just by loading the
-module.
+Тестируемое приложение должно быть модулем Lua, который можно
+загрузить при помощи `require` без побочных эффектов.
+Имеет смысл поместить класс приложения в отдельный файл,
+чтобы его можно было получить, просто загрузив этот файл.
 
-In these examples we'll define the application in the same file as the tests
-for simplicity.
+В примерах приложение и тесты определены в одном файле
+для упрощения.
 
-A request can be mocked using the `mock_request` function defined in
-`lapis.spec.request`:
+Для имитации запроса используется функция `mock_request`,
+определённая в модуле `lapis.spec.request`:
 
 ```lua
 local mock_request = require("lapis.spec.request").mock_request
@@ -42,8 +45,8 @@ import mock_request from require "lapis.spec.request"
 status, body, headers = mock_request(app, url, options)
 ```
 
-For example, to test a basic application with
-[Busted](http://olivinelabs.com/busted/) we could do:
+Пример тестирования стандартного приложения при помощи
+[Busted](http://olivinelabs.com/busted/):
 
 ```lua
 local lapis = require("lapis.application")
@@ -52,7 +55,7 @@ local mock_request = require("lapis.spec.request").mock_request
 local app = lapis.Application()
 
 app:match("/hello", function(self)
-  return "welcome to my page"
+  return "Добро пожаловать"
 end)
 
 describe("my application", function()
@@ -60,7 +63,7 @@ describe("my application", function()
     local status, body = mock_request(app, "/hello")
 
     assert.same(200, status)
-    assert.truthy(body:match("welcome"))
+    assert.truthy(body:match("Добро"))
   end)
 end)
 
@@ -72,34 +75,42 @@ lapis = require "lapis"
 import mock_request from require "lapis.spec.request"
 
 class App extends lapis.Application
-  "/hello": => "welcome to my page"
+  "/hello": => "Добро пожаловать"
 
 describe "my application", ->
   it "should make a request", ->
     status, body = mock_request App, "/hello"
 
     assert.same 200, status
-    assert.truthy body\match "welcome"
+    assert.truthy body\match "Добро"
 ```
 
-`mock_request` simulates an `ngx` variable from the Lua Nginx module and
-executes the application. The `options` argument of `mock_request` can be used
-to control the kind of request that is simulated. It takes the following
-options in a table:
+Функция `mock_request` создаёт имитацию переменной `ngx`
+из модуля Nginx Lua и подаёт её в приложение.
+Аргумент `options` функции `mock_request` контролирует
+тип запроса.
+Возможные поля таблицы `options`:
 
-* `get` --  A table of GET parameters to add to the url
-* `post` -- A table of POST parameters (sets default method to `"POST"`)
-* `method` -- The HTTP method to use (defaults to `"GET"`)
-* `headers` -- Additional HTTP request headers
-* `host` -- The host the mocked server (defaults to `"localhost"`)
-* `port` -- The port of the mocked server (defaults to `80`)
-* `scheme` -- The scheme of the mocked server (defaults to `"http"`)
-* `prev` -- A table of the response headers from a previous `mock_request`
+* `get` --  таблица с параметрами GET
+* `post` -- таблица с параметрами POST (если это поле
+    присутствует, то `method` устанавливается
+    в значение `"POST"`)
+* `method` -- метод HTTP (по умолчанию `"GET"`)
+* `headers` -- дополнительные заголовки HTTP-запроса
+* `host` -- адрес имитируемого сервера
+    (по умолчанию `"localhost"`)
+* `port` -- порт имитируемого сервера
+    (по умолчанию `80`)
+* `scheme` -- схема URL имитируемого сервера
+    (по умолчанию `"http"`)
+* `prev` -- таблица заголовков ответа от
+    предыдущего вызова `mock_request`
 
-
-If you want to simulate a series of requests that use persistant data like
-cookies or sessions you can use the `prev` option in the table. It takes the
-headers returned from a previous request.
+Можно симитировать серию запросов.
+Если в них участвуют постояные данные (куки или сессии),
+имеет смысл сохранять их от запроса к запросу.
+Для этого надо передать заголовки ответа на предыдущий запрос
+в поле `prev`.
 
 ```lua
 local r1_status, r1_res, r1_headers = mock_request(my_app, "/first_url")
@@ -111,22 +122,26 @@ r1_status, r1_res, r1_headers = mock_request MyApp!, "/first_url"
 r2_status, r2_res = mock_request MyApp!, "/second_url", prev: r1_headers
 ```
 
-## Using the Test Server
+## Тестовый сервер
 
-While mocking a request is useful, it doesn't give you access to the entire
-stack that your application uses. For that reason you can spawn up a *test*
-server which you can issue real HTTP requests to.
+Хотя имитирование запросов имеет свои преимущества,
+оно не даёт доступа ко всем компонентам, которые использует
+реальное приложение.
+Поэтому существует вторая система тестирования:
+*тестовый* сервер Nginx, через который проходят реальные
+HTTP-запросы.
 
-The test server runs inside of the `test` environment (compared to
-`development` and `production`). This enables you to have a separate database
-connection for tests so you are free to delete and create rows in the database
-without messing up your development state.
+Тестовый сервер запускается в окружении `test`
+(см. также окружения `development` и `production`).
+В этом окружении можно иметь отдельную БД для тестов,
+чтобы она не путалась с БД, используемыми для
+разработки и запуска в боевых условиях.
 
+Для управления тестовым сервером есть две функции:
+`load_test_server` и `close_test_server`,
+они находятся в модуле `"lapis.spec.server"`.
 
-The two functions that control the test server are `load_test_server` and
-`close_test_server`, and they can be found in `"lapis.spec.server"`.
-
-If you are using Busted then you might use these functions as follows:
+Из Busted эти две функции вызываются так:
 
 ```lua
 local spec_server = require("lapis.spec.server")
@@ -140,7 +155,7 @@ describe("my site", function()
     spec_server.close_test_server()
   end)
 
-  -- write some tests that use the server here
+  -- тесты, которые используют сервер
 end)
 ```
 
@@ -155,19 +170,22 @@ describe "my_site", ->
   teardown ->
     close_test_server!
 
-  -- write some tests that use the server here
+  -- тесты, которые используют сервер
 ```
 
-The test server will either spawn a new Nginx if one isn't running, or it will
-take over your development server until `close_test_server` is called. Taking
-over the development server is useful for seeing the raw Nginx output in the
-console.
+Тестовый сервер запускается в новом Nginx
+(если ни одного Nginx не запущено)
+или захватывает работающий отладочный сервер до тех пор,
+пока не будет вызван `close_test_server`.
+Захват отладочного сервера нужен, чтобы видеть
+выдачу Nginx в консоли.
 
-While the test server is running we are free to make queries and use
-models. Database queries are transparently sent over HTTP to the test server
-and executed inside of Nginx.
+Во время работы тестового сервера можно совершать запросы
+к БД и работать с моделями.
+Запросы к БД пересылаются на тестовый сервер через HTTP и
+выполняются внутри Nginx.
 
-For example, we could write a basic unit test for a model:
+Пример юнит-теста для модели:
 
 ```lua
   it("should create a User", function()
@@ -185,9 +203,10 @@ For example, we could write a basic unit test for a model:
 
 ### `request(path, options={})`
 
-To make HTTP request to the test server you can use the helper function
-`request` found in `"lapis.spec.server"`. For example we might write a test to
-make sure `/` loads without errors:
+Используется для совершения HTTP-запросов к тестовому серверу.
+Эта функция находится в модуле `"lapis.spec.server"`.
+
+Проверим, что `/` загружается без ошибок:
 
 ```lua
 local spec_server = require("lapis.spec.server")
@@ -226,23 +245,29 @@ describe "my_site", ->
 
 ```
 
-`path` is either a path of a full URL to request against the test server. If it
-is a full URL then the hostname of the URL is extracted and inserted as the
-host header.
+`path` - это путь или полный URL запроса, отправляемого
+на тестовый сервер.
+Если передать полный URL, то доменное имя сервера
+извлекается из URL и передаётся в заголовке Host.
 
-The `options` argument can be used to further configure the request. It
-supports the following options in the table:
+Аргумент `options` - таблица опций. Возможные поля:
 
-* `post` -- A table of POST parameters. Sets default method to `"POST"`,
-  encodes the table as the body of the request and sets the `Content-type`
-  header to `application/x-www-form-urlencoded`
-* `method` -- The HTTP method to use (defaults to `"GET"`)
-* `headers` -- Additional HTTP request headers
-* `expect` -- What type of response to expect, currently only supports
-  `"json"`. It will parse the body automatically into a Lua table or throw an
-  error if the body is not valid JSON.
-* `port` -- The port of the server, defaults to the randomly assigned port defined autmatically when running tests
+* `post` -- таблица с параметрами POST (если это поле
+    присутствует, то `method` устанавливается
+    в значение `"POST"`, сама таблица кодируется как тело
+    запроса, а заголовок `Content-type` принимает значение
+    `application/x-www-form-urlencoded`)
+* `method` -- метод HTTP (по умолчанию `"GET"`)
+* `headers` -- дополнительные заголовки HTTP-запроса
+* `expect` -- тип ожидаемого ответа
+    (на данный момент поддерживает только "json":
+    автоматически парсит тело ответа в таблицу Lua
+    или порождает ошибку, если ответ не является
+    корректным JSON)
+* `port` -- порт сервера (по умолчанию случайное число,
+    которое присваивается автоматически при запуске тестов)
 
-The function has three return values: the status code as a number, the body of
-the response and any response headers in a table.
+Функция возвращает три значения:
+код состояния HTTP, тело ответа и все заголовки
+ответа в таблице.
 
