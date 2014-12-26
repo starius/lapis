@@ -1,42 +1,48 @@
 title: Exception Handling 
 --
-# Exception Handling
+# Обработка ошибок
 
-## The Kinds of Errors
+## Типы ошибок
 
-Lapis makes a distinction between two kinds of errors: Recoverable and
-non-recoverable errors. Errors thrown by Lua's runtime during executuion or
-calls to  `error` are considered non-recoverable. (This also includes the Lua
-built-in function `assert`)
+В Lapis ошибки разделяют на два типа:
+*исправимые* и *неисправимые*.
+Ошибки, порождаемые Lua, и вызовы функции `error`
+(в том числе, срабатывания функции `assert`)
+считаются неисправимыми ошибками.
 
-Because non-recoverable errors aren't expected to be captured by the user,
-Lapis catches them and prints an exception message to the browser. Any action
-that may have been running is aborted and Lapis prints a special view showing
-the stack trace along with setting the status to `500`.
+Разработчик сайта не должен допускать
+неисправимые ошибки. Если они происходят,
+Lapis печатает сообщение об ошибке в браузер.
+Если ошибка произошла в обработчике, то он прерывается
+и выводится трассировка стека.
+Кроме того, устанавливается код состояния HTTP `500`.
 
-These kinds of errors typically are an indicator of a bug or other serious
-issue and should be fixed.
+Обычно такие ошибки - результат бага в коде сайта или другой
+серьёзной ошибки и должны быть исправлены.
 
-Recoverable errors are a user controlled way of aborting the execution of an
-action to run a special error handling function. They are implemented using
-coroutines instead of Lua's error system.
+Исправимые ошибки - это способ прервать исполнение обработчика,
+контролируемый разработчиком сайта.
+Они реализованы не через Lua'шную систему обработки ошибок,
+а через сопрограммы.
 
-Examples include non-valid inputs from users, or missing records from the
-database.
+Примеры исправимых ошибок: неверный ввод данных
+пользователем, отсутствующие записи БД.
 
-## Capturing Recoverable Errors
+## Перехват исправимых ошибок
 
-The `capture_errors` helper is used wrap an action such that it can capture
-errors and run an error handler.
+Вспомогательная функция `capture_errors` -
+обёртка для обработчика, которая перехватывает
+исправимые ошибки и вызывает обработчик ошибок.
 
-This does not capture runtime errors. You should use `pcall` if you
-want to capture runtime errors as you would normally do in Lua.
+Эта функция не перехватывает ошибки Lua,
+для этого надо использовать функцию `pcall`, как и обычно.
 
-Lua doesn't have the concept of exceptions like most other languages. Instead
-Lapis creates an exception handling system using coroutines. We must define the
-scope in which we will capture errors. We do that using the `capture_errors`
-helper. Then we can throw a raw error using `yield_error`.
-
+В Lua нет механизма исключений, как в других языках.
+Вместо этого в Lapis реализована система обработки ошибок,
+основанная на сопрограммах.
+Чтобы перехватывать исправимые ошибки, обработчик
+передаётся во вспомогательную функцию `capture_errors`.
+Чтобы породить ошибку, используется функция `yield_error`.
 
 ```lua
 local lapis = require("lapis")
@@ -47,8 +53,8 @@ local capture_errors, yield_error = app_helpers.capture_errors, app_helpers.yiel
 local app = lapis.Application()
 
 app:match("/do_something", capture_errors(function(self)
-  yield_error("something bad happened")
-  return "Hello!"
+  yield_error("Произошла ошибка")
+  return "Привет!"
 end))
 ```
 
@@ -57,32 +63,40 @@ import capture_errors, yield_error from require "lapis.application"
 
 class App extends lapis.Application
   "/do_something": capture_errors =>
-    yield_error "something bad happened"
-    "Hello!"
+    yield_error "Произошла ошибка"
+    "Привет!"
 ```
 
-What happens when there is an error? The action will stop executing at the
-first error, and then the error handler is run. The default error handler will
-set an array like table of errors in <span
-class="for_moon">`@errors`</span><span class="for_lua">`self.errors`</span> and
-return <span class="for_moon">`render: true`</span><span class="for_lua">`{
-render = true }`</span>. In your view you can then display the errors. This
-means that if you have a named route the view of that route will render. You
-should then code your view to sometimes have a `errors` table.
+Рассмотрим, что происходит в случае ошибки.
+Выполнение обработчика прекращается при первой ошибке,
+после чего запускается обработчик ошибок.
+Обработчик ошибок по умолчанию записывает
+список ошибок в переменную
+<span class="for_moon">`@errors`</span>
+<span class="for_lua">`self.errors`</span>
+и возвращает
+<span class="for_moon">`render: true`</span>
+<span class="for_lua">`{ render = true }`</span>.
+Если у вас есть представление с тем же именем,
+что и текущий путь, то оно и будет отображено.
+В коде представлений надо учитывать возможность
+существования ошибок (переменная `errors`).
 
-If you want to have a custom error handler you can invoke `capture_errors` with
-a table: (note that <span class="for_moon">`@errors`</span><span
-class="for_lua">`self.errors`</span> is set before the custom handler)
+Чтобы использовать свой обработчик ошибок, надо передать
+его в `capture_errors` в составе таблицы
+(внимание: значение <span class="for_moon">`@errors`</span>
+<span class="for_lua">`self.errors`</span>
+выставляется до вызова этого обработчика)
 
 ```lua
 app:match("/do_something", capture_errors({
   on_error = function(self)
-    log_erorrs(self.errors) -- you would supply the log_errors function
+    log_erorrs(self.errors) -- у вас есть функция log_errors
     return { render = "my_error_page", status = 500 }
   end,
   function(self)
     if self.params.bad_thing then
-      yield_error("something bad happened")
+      yield_error("произошла ошибка")
     end
     return { render = true }
   end
@@ -93,21 +107,23 @@ app:match("/do_something", capture_errors({
 class App extends lapis.Application
   "/do_something": capture_errors {
     on_error: =>
-      log_errors @errors -- you would supply the log_errors function
+      log_errors @errors -- у вас есть функция log_erorrs
       render: "my_error_page", status: 500
 
     =>
       if @params.bad_thing
-        yield_error "something bad happened"
+        yield_error "произошла ошибка"
       render: true
   }
 ```
 
-`capture_errors` when called with a table will use the first positional value
-as the action.
+Если в функцию `capture_errors` передали таблицу,
+то в качестве обработчика используется первый
+позиционный аргумент.
 
-If you're building a JSON API then another method is provided,
-`capture_errors_json`, which renders the errors in a JSON object like so:
+Для использования в JSON API полезен другой метод:
+`capture_errors_json`, который отображает ошибку
+в виде объекта JSON:
 
 ```lua
 local lapis = require("lapis")
@@ -118,7 +134,7 @@ local capture_errors_json, yield_error = app_helpers.capture_errors_json, app_he
 local app = lapis.Application()
 
 app:match("/", capture_errors_json(function(self)
-  yield_error("something bad happened")
+  yield_error("произошла ошибка")
 end))
 ```
 
@@ -127,10 +143,11 @@ import capture_errors_json, yield_error from require "lapis.application"
 
 class App extends lapis.Application
   "/": capture_errors_json =>
-    yield_error "something bad happened"
+    yield_error "произошла ошибка"
 ```
 
-Would render (with the correct content type):
+Будет сформирован следующий ответ с правильным
+Content-type:
 
 ```json
 { errors: ["something bad happened"] }
@@ -138,13 +155,17 @@ Would render (with the correct content type):
 
 ### `assert_error`
 
-It is idiomatic in Lua to return `nil` and an error message from a function
-when it fails. For this reason the helper `assert_error` exists. If the first
-argument is falsey (`nil` or `false`) then the second argument is thrown as an
-error, otherwise all the arguments are returned from the function unchanged.
+В Lua принято в случае ошибки возвращать из функции
+`nil` и сообщение об ошибке.
+Результаты таких функций удобно передавать в функцию
+`assert_error`.
+Если первый аргумент `assert_error` ложный (`nil` или `false`),
+то порождается ошибка, а в качестве сообщения об ошибке
+используется второй аргумент.
+Иначе `assert_error` возвращает все свои аргументы как есть.
 
-`assert_error` is very handy with database methods, which make use of this
-idiom.
+Функция `assert_error` очень полезна при работе с БД.
+Методы работы с БД следуют вышеописанному правилу.
 
 ```lua
 local lapis = require("lapis")
@@ -156,7 +177,7 @@ local app = lapis.Application()
 
 app:match("/", capture_errors(function(self)
   local user = assert_error(Users:find({id = "leafo"}))
-  reutrn "result: " .. user.id
+  return "результат: " .. user.id
 end))
 
 ```
@@ -167,7 +188,7 @@ import capture_errors, assert_error from require "lapis.application"
 class App extends lapis.Application
   "/": capture_errors =>
     user = assert_error Users\find id: "leafo"
-    "result: #{user.id}"
+    "результат: #{user.id}"
 ```
 
 
