@@ -1,6 +1,6 @@
-title: Getting Started With Lapis
+title: Введение
 --
-# Начало работы с Lapis
+# Введение
 
 [Lapis](http://leafo.net/lapis/) - веб-фреймворк
 для Lua и MoonScript.

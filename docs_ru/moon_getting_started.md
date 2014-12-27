@@ -1,8 +1,8 @@
-title: Создаем приложение Lapis на MoonScript
+title: Введение (MoonScript)
 --
 <div class="override_lang"></div>
 
-# Создаем приложение Lapis на MoonScript
+# Введение (MoonScript)
 
 ## Создаем базовое приложение
 

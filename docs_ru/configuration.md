@@ -1,4 +1,4 @@
-title: Configuration and Environments
+title: Конфигурации и окружения
 --
 # Конфигурации и окружения
 

@@ -1,8 +1,8 @@
-title: Создаем приложение Lapis на Lua
+title: Введение (Lua)
 --
 <div class="override_lang" data-lang="lua"></div>
 
-# Создаем приложение Lapis на Lua
+# Введение (Lua)
 
 ## Создаем новый проект
 

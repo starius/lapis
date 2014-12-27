@@ -1,4 +1,4 @@
-title: Lapis Console
+title: Консоль Lapis
 --
 # Консоль Lapis
 

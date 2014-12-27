@@ -1,4 +1,4 @@
-title: Command Line Interface
+title: Интерфейс командной строки
 --
 # Интерфейс командной строки
 
