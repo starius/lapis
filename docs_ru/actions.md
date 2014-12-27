@@ -24,8 +24,8 @@ title: Запросы и обработчики
 
 ```lua
 app:match("/", function(self) end)
-app:match("/hello" function(self) end)
-app:match("/users/all" function(self) end)
+app:match("/hello", function(self) end)
+app:match("/users/all", function(self) end)
 ```
 
 ```moon
@@ -47,10 +47,10 @@ class extends lapis.Application
 
 
 ```lua
-app:match("/page/:page" function(self)
+app:match("/page/:page", function(self)
   print(self.params.page)
 end)
-app:match("/post/:post_id/:post_name" function(self) end)
+app:match("/post/:post_id/:post_name", function(self) end)
 ```
 
 ```moon
@@ -68,10 +68,10 @@ class extends lapis.Application
 Значение, захваченное звёздочкой, сохраняется в поле `self.params.splat`.
 
 ```lua
-app:match("/browse/*" function(self)
+app:match("/browse/*", function(self)
   print(self.params.splat)
 end)
-app:match("/user/:name/file/*" function(self) end)
+app:match("/user/:name/file/*", function(self) end)
 ```
 
 ```moon
@@ -289,7 +289,7 @@ end)
 
 app:match("/", function(self)
   -- returns: /data/123/height
-  self.url_for("user_data", { user_id = 123, data_field = "height"})
+  self:url_for("user_data", { user_id = 123, data_field = "height"})
 end)
 ```
 

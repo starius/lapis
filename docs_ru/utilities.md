@@ -627,7 +627,7 @@ class MyForm extends Widget
 locl app = lapis.Application()
 
 app:post("/my_action", function(self)
-  local file = @params.uploaded_file
+  local file = self.params.uploaded_file
   if file then
     return "Загрузили: " .. file.filename .. ", " .. #file.content .. " байт"
   end
