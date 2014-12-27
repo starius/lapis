@@ -1,51 +1,57 @@
 title: Getting Started With Lapis
 --
-# Getting Started With Lapis
+# Начало работы с Lapis
 
-[Lapis](http://leafo.net/lapis/) is a web framework written for Lua and
-MoonScript. Lapis is interesting because it's built on top of the Nginx
-distribution [OpenResty][0]. Your web application is run directly inside of
-Nginx. Nginx's event loop lets you make asynchronous HTTP requests, database
-queries and other requests using the modules provided with OpenResty. Lua's
-coroutines allow you to write synchronous looking code that is event driven
-behind the scenes.
+[Lapis](http://leafo.net/lapis/) - веб-фреймворк
+для Lua и MoonScript.
+Lapis замечателен тем, что построен на основе
+[OpenResty][0] (сборка Nginx).
+Код веб-приложения исполняется в самом Nginx.
+Пользуясь циклом обработки событий Nginx, можно запускать
+асинхронные HTTP-запросы, запросы к БД и другие запросы
+с помощью модулей, входящих в состав OpenResty.
+Благодаря сопрограммам Lua удаётся писать
+асинхронный код, который выглядит так же, как синхронный.
 
-In addition to providing a web framework, Lapis also provides tools for
-controlling OpenResty in different configuration environments. Even if you
-don't want to use the web framework you might find it useful if you're working
-with OpenResty.
+Lapis включает не только веб-фреймворк, но и инструменты
+управления OpenResty в различных конфигурациях,
+которые могут использоваться отдельно от веб-фреймворка.
 
-The web framework comes with a URL router, HTML templating, CSRF and session
-support, a PostgreSQL backed active record system for working with models
-and a handful of other useful functions needed for developing websites.
+В веб-фреймворк входит обработчик URL, HTML-шаблоны,
+защита от CSRF, сессии, система моделей
+для работы с БД PostgreSQL и другие полезные функции,
+необходимые для разработки веб-сайтов.
 
-This guide hopes to serve as a tutorial and a reference.
+Этот документ выступает в роли учебника и
+справочника по Lapis.
 
-## Basic Setup
+## Базовая настройка
 
-Install OpenResty onto your system. If you're using Heroku then you can use the
-[Heroku OpenResty module][4] along with the [Lua build pack][3].
+Установите OpenResty.
+Если пользуетесь Heroku, используйте
+модули Heroku [OpenResty][4] и [Lua build pack][3].
 
-Next install Lapis using LuaRocks:
+Затем установите Lapis через LuaRocks:
 
 ```bash
 $ luarocks install lapis
 ```
 
-## Creating An Application
+## Создание проекта
 
-### `lapis` Command Line Tool
+### Команда `lapis`
 
-Lapis comes with a command line tool to help you create new projects and start
-the server. To see what Lapis can do, run in your shell:
-
+В пакет Lapis входит утилита командной строки
+для создания проекта и запуска сервера.
+Чтобы получить полный список её возможностей,
+запустите следующую команду:
 
 ```bash
 $ lapis help
 ```
 
-For now though, we'll just be creating a new project. Navigate to a clean
-directory and run:
+Начнём с создания нового проекта.
+Перейдите в пустую папку и запустите:
 
 ```bash
 $  lapis new
@@ -55,33 +61,38 @@ wrote	mime.types
 wrote	app.moon
 ```
 
-> If you want a Lua starter application then you can pass the `--lua` flag,
-> more about this in the [Lua getting started
-> guide]($root/reference/lua_getting_started.html).
+> Если вы хотите получить приложение на Lua,
+> а не на MoonScript, добавьте опцию `--lua`.
+> См. также [раздел про создание приложений на
+> Lua]($root/reference/lua_getting_started.html).
 
-Lapis starts you off by writing a basic Nginx configuration and a blank Lapis
-application.
+Мы получили базовую конфигурацию Nginx и пустое
+приложение Lapis.
 
-Feel free to look at the generated configuration file (`nginx.conf` is the only
-important file). Here's a brief overview of what it does:
+Посмотрите созданные файлы. Самый важный среди них
+`nginx.conf`. Вот что в нем написано:
 
- * Any requests inside `/static/` will serve files out of the directory
-   `static` (You can create this directory now if you want)
- * A request to `/favicon.ico` is read from `static/favicon.ico`
- * All other requests will be served by Lua, more specifically a module named `"app"`
+ * Запросы к пути `/static/` соответствуют статическим файлам
+    внутри папки `static` (вы можете создать её)
+ * Запросы к `/favicon.ico` получают в ответ файл
+    `static/favicon.ico`
+ * Все остальные запросы обрабатывает Lua,
+    точнее модуль `"app"`
 
-When you start the server using the `lapis` command line tool the `nginx.conf`
-file is processed and templated variables are filled with values from the
-current Lapis' environment. This is discussed in more detail further on.
+При запуске сервера с помощью команды `lapis server`
+препроцессируется файл `nginx.conf`: в него подставляются
+переменные из текущего окружения Lapis и результат
+записывается в файл `nginx.conf.compiled`.
 
-### Nginx Configuration
+### Конфигурация Nginx
 
-Let's take a look at the configuration that `lapis new` has given us. Although
-it's not necessary to look at this immediately, it's important to understand
-when building more advanced applications or even just deploying your
-application to production.
+Посмотрим более пристально на конфигурацию Nginx, которую
+создает `lapis new` (файл `nginx.conf`).
+Можно вернуться к этому позже, но важно понимать,
+как это работает, чтобы "заточить" конфигурацию под себя
+или хотя бы запустить приложение в боевых условиях.
 
-Here is the `nginx.conf` that has been generated:
+Содержимое файла `nginx.conf`:
 
 ```nginx
 worker_processes ${{NUM_WORKERS}};
@@ -117,73 +128,81 @@ http {
 }
 ```
 
-The first thing to notice is that this is not a normal Nginx configuration
-file. Special `${{VARIABLE}}` syntax is used by Lapis to inject environment
-settings before starting the server.
+Во-первых, этот файл пока не является работающей конфигурацией
+Nginx. В нём есть несколько переменных (${{VARIABLE}}),
+значения которых подставляются из текущего окружения Lapis.
 
-There are a couple interesting things provided by the default configuration.
-`error_log stderr notice` and `daemon off` lets our server run in the
-foreground, and print log text to the console. This is great for development,
-but worth turning off in a production environment.
+Во-вторых, директива `daemon off` не даёт серверу уйти
+в фоновый режим, а `error_log stderr notice`
+указывает, что лог надо выводить на консоль.
+Это полезно при разработке, но стоит отключить
+в боевом режиме.
 
-`lua_code_cache` is also another setting useful for development. When set to
-`off` it causes all Lua modules to be reloaded on each request. Modifications to
-the web application's source code can then be reloaded automatically. In a
-production environment the cache should be enabled (`on`) for optimal performance.
-Defaults to `off`.
+Параметр `lua_code_cache` тоже полезен при разработке.
+Если его значение равно `off`, то все модули Lua
+перезагружаются при каждом запросе.
+Благодаря этому изменения кода сайта видны сразу.
+А в боевом режиме кеширование Lua-кода надо включить
+для увеличения производительности.
+По умолчанию значение `off`.
 
-The `content_by_lua` directive specifies a chunk of Lua code that will handle
-any request that doesn't match the other locations. It loads Lapis and tells it
-to serve the module named `"app"`. The `lapis new` command ran earlier provides
-a skeleton `app` module to get started with
+В директиве `content_by_lua` записан код Lua,
+который обрабатывает все запросы, которые не попали в
+другие `location`ы.
+Этот код загружает Lapis с модулем `"app"`.
+(Костяк сайта в модуле `app` был создан командой `lapis new`.)
 
-## Starting The Server
+## Запуск сервера
 
-Although it's possible to start Nginx manually, Lapis wraps building the
-configuration and starting the server into a single convenient command.
+Хотя Nginx можно запустить и вручную,
+Lapis предоставляет удобную команду `lapis server`,
+которая препроцессирует файл конфигурации и
+запускает сервер.
 
-Running `lapis server` in the shell will start the server. Lapis will
-attempt to find your OpenResty installation. It will search the following
-directories for an `nginx` binary. (The last one represents anything in your
-`PATH`)
+Lapis пытается найти установленный OpenResty
+в следующих папках:
 
     "/usr/local/openresty/nginx/sbin/"
     "/usr/local/opt/openresty/bin/"
     "/usr/sbin/"
     ""
 
-> Remember that you need OpenResty and not a normal installation of Nginx.
-> Lapis will ignore regular Nginx binaries.
+Последняя запись обозначает все пути, которые
+есть в переменной `PATH`.
 
+> Вам нужен именно OpenResty, а не обычный Nginx.
+> Lapis пропускает обычные установки Nginx.
 
-If you've been following along, go ahead and start the server to see what it
-looks like:
+Теперь запустим сервер:
 
 ```bash
 $ lapis server
 ```
 
-The default configuration puts the server in the foreground, use `CTRL+C` to
-stop the server.
+Конфигурация по умолчанию не уводит сервер в фоновый режим,
+поэтому нажмите `Ctrl+C` для его отключения.
 
-If the server is running in the background it can be stopped with the command
-`lapis term`. It must be run in the root directory of the application.  This
-command looks for the PID file for a running server and sends a `TERM` message
-to that process if it exists.
+Если сервер работает в фоновом режиме, его можно остановить
+при помощи команды `lapis term`, запущенной в корневой папке
+приложения. Эта команда получает номер процесса из PID-файла
+и посылает сигнал `TERM`, если процесс существует.
 
-## Creating An Application
+## Создание приложения
 
-Now that you know how to generate a new project and start and stop the server
-you're ready to start writing application code. This guide splits into two for
-MoonScript and Lua.
+Теперь вы умеете создавать новый проект и запускать
+и останавливать сервер.
+Перейдём к созданию самого приложения.
+Этот раздел разбит на две части: для MoonScript и для Lua.
 
-I recommended reading through both paths if you're unsure what you want to use.
+Если не знаете, с чего начать, советуем прочитать обе части.
 
- * [Create an application with Lua][1]
- * [Create an application with MoonScript][2]
+ * [Создание приложения на Lua][1]
+ * [Создание приложения на MoonScript][2]
 
-> Further guides have MoonScript and Lua examples on the same page and can be
-> toggled with the *MoonScript* and *Lua* buttons on the top right.
+> Последующие разделы включают примеры кода на MoonScript
+> и на Lua. Язык можно переключать с помощью кнопок
+> *MoonScript* and *Lua*, расположенных над списком разделов
+> (всплывающее меню слева).
 
 [0]: http://openresty.org/
 [1]: lua_getting_started.html
