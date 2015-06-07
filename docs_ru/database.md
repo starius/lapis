@@ -1217,6 +1217,28 @@ for page_results, page_num in paginated\each_page!
   print(page_results, page_num)
 ```
 
+### Описание отношений моделей
+
+Для описания отношений между моделями в классе модели
+существует поле `relations`.
+
+```lua
+local Model = require("lapis.db.model").Model
+local Posts = Model:extend("posts", {
+  relations = {
+    user = "Users"
+  }
+})
+```
+
+```moon
+import Model from require "lapis.db.models"
+class Posts extends Model
+  @relations: {
+    user: "Users"
+  }
+```
+
 ### Получение списка полей таблицы
 
 Список полей таблицы можно получить с помощью
