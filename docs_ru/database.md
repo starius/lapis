@@ -1219,14 +1219,16 @@ for page_results, page_num in paginated\each_page!
 
 ### Описание отношений моделей
 
-Для описания отношений между моделями в классе модели
+Часто модели ссылаются друг на друга с помощью *внешних
+ключей*. Для описания отношений между моделями в классе модели
 существует поле `relations`.
 
 ```lua
 local Model = require("lapis.db.model").Model
 local Posts = Model:extend("posts", {
   relations = {
-    {"users", has_one = "Users"}
+    {"users", belongs_to = "Users"},
+    {"posts", has_many = "Tags"}
   }
 })
 ```
@@ -1235,7 +1237,298 @@ local Posts = Model:extend("posts", {
 import Model from require "lapis.db.models"
 class Posts extends Model
   @relations: {
-    {"user", has_one: "Users"}
+    {"user", belongs_to: "Users"}
+    {"posts", has_many: "Tags"}
+  }
+```
+
+Если в модель добавить описание отношений, то появятся методы
+для получения связанных объектов. В этом примере отношение
+`belongs_to` создаёт метод `get_user`:
+
+```lua
+local post = Posts:find(1)
+local user = post:get_user()
+
+-- calling again returns the cached value
+local user = post:get_user()
+```
+
+```moon
+post = Posts\find 1
+user = post\get_user!
+
+-- calling again returns the cached value
+user = post\get_user!
+```
+
+```sql
+SELECT * from "posts" where "id" = 1;
+SELECT * from "users" where "id" = 123;
+```
+
+Виды отношений:
+
+### `belongs_to`
+
+Отношение "один-к-одному". Внешний ключ расположен в
+ссылающейся модели.
+
+Имя поля, в котором хранится внешний ключ, и имя метода,
+загружающего связанную модель, образуются из названия
+отношения.
+
+К примеру, если имя связанной модели `user`, то будет добавлен
+метод `get_user`, который будет возвращать объект, на который
+ссылается внешний ключ `user_id`.
+
+```lua
+local Model = require("lapis.db.model").Model
+
+local Posts = Model:extend("posts", {
+  relations = {
+    {"user", belongs_to = "Users"}
+  }
+})
+```
+
+```moon
+import Model from require "lapis.db.models"
+
+class Posts extends Model
+  @relations: {
+    {"user", belongs_to: "Users"}
+  }
+```
+
+Загрузка связанной модели:
+
+
+```lua
+local user = post:get_user()
+```
+
+```moon
+user = post\get_user!
+```
+
+```sql
+SELECT * from "users" where "user_id" = 123;
+```
+
+Отношение `belongs_to` может содержать опцию `key`,
+которая меняет поле текущей модели, в котором находится
+вторичный ключ.
+
+### `has_one`
+
+Тоже "один-к-одному", но вторичный ключ находится в связанной
+модели и указывает на текущую модель.
+
+```lua
+local Model = require("lapis.db.model").Model
+
+local Users = Model:extend("users", {
+  relations = {
+    {"user_profile", has_one = "UserProfiles"}
+  }
+})
+```
+
+```moon
+import Model from require "lapis.db.models"
+class Users extends Model
+  @relations: {
+    {"user_profile", has_one: "UserProfiles"}
+  }
+```
+
+Также добавляется метод `get_`, загружающий связанный объект.
+
+```lua
+local profile = user:get_user_profile()
+```
+
+```moon
+profile = user\get_user_profile!
+```
+
+```sql
+SELECT * from "user_profiles" where "user_id" = 123;
+```
+
+Отношение `has_one` переводит имя таблицы в
+единственное число и добавляет `_id`. Таблица `users`
+превращается в `user_id`. Имя поля можно изменить с помощью
+опции `key`.
+
+
+```lua
+local Model = require("lapis.db.model").Model
+
+local Users = Model:extend("users", {
+  relations = {
+    {"user_profile", has_one = "UserProfiles", key = "owner_id"}
+  }
+})
+```
+
+```moon
+import Model from require "lapis.db.models"
+
+class Users extends Model
+  @relations: {
+    {"user_profile", has_one: "UserProfiles", key: "owner_id"}
+  }
+```
+
+```lua
+local profile = user:get_user_profile()
+```
+
+```moon
+profile = user\get_user_profile!
+```
+
+```sql
+SELECT * from "user_profiles" where "owner_id" = 123;
+```
+
+### `has_many`
+
+Отношение "один-к-многим". Определяет два метода: один
+возвращает [объект `Pager`](#pagination), а другой -
+возвращает все объекты.
+
+```lua
+local Model = require("lapis.db.model").Model
+
+local Users = Model:extend("users", {
+  relations = {
+    {"posts", has_many = "Posts"}
+  }
+})
+```
+
+```moon
+import Model from require "lapis.db.models"
+class Users extends Model
+  @relations: {
+    {"posts", has_many: "Posts"}
+  }
+```
+
+Метод `get_` загружает все связанные объекты. Если связанный
+объект уже загружен, то вернется сохраненная копия, которая
+хранится в поле модели, соответствующем имени отношения.
+
+```lua
+local posts = user:get_posts()
+```
+
+```moon
+posts = user\get_posts!
+```
+
+```sql
+SELECT * from "posts" where "user_id" = 123
+```
+
+Метод `get_X_paginated` возвращает пагинатор, указывающий на
+связанные объекты. Он полезен, если отношение связывает много
+объектов и нет смысла загружать их все.
+
+Все дополнительные аргументы, переданные в `get_X_paginated`,
+передаются в конструктор пагинатора. К примеру, можно указать
+поля `fields`, `prepare_results` и `per_page`:
+
+```lua
+local posts = user:get_posts_paginated({per_page = 20}):get_page(3)
+```
+
+```moon
+posts = user\get_posts_paginated(per_page: 20)\get_page 3
+```
+
+```sql
+SELECT * from "posts" where "user_id" = 123 LIMIT 20 OFFSET 40
+```
+
+Дополнительные опции отношения `has_many`:
+
+* `key` -- внешний ключ, через который связаны объекты. По
+    умолчанию образуется приписыванием `_id` к имени таблицы
+    в единственном числе: `Users` → `user_id`
+* `where` -- таблица с дополнительными ограничениями на
+    возвращаемые объекты
+* `order` -- фрагмент SQL-запроса, следующий за `order by`
+* `as` -- префикс методов, по умолчанию `get_`
+
+Пример более сложных отношений:
+
+```lua
+local Model = require("lapis.db.model").Model
+
+local Users = Model:extend("users", {
+  relations = {
+    {"authored_posts",
+			has_many = "Posts",
+			where = {deleted = false},
+			order = "id desc",
+			key = "poster_id"}
+  }
+})
+```
+
+```moon
+import Model from require "lapis.db.models"
+class Users extends Model
+  @relations: {
+    {"authored_posts"
+			has_many: "Posts"
+			where: {deleted: false}
+			order: "id desc"
+			key: "poster_id"}
+  }
+```
+
+```lua
+local posts = user:get_authored_posts()
+```
+
+```moon
+posts = user\get_authored_posts!
+```
+
+```sql
+SELECT * from "posts" where "poster_id" = 123 and deleted = FALSE order by id desc
+```
+
+### `fetch`
+
+Произвольное отношение, определенное функцией, возвращающей
+связанные данные. Результат запоминается.
+
+
+```lua
+local Model = require("lapis.db.model").Model
+
+local Users = Model:extend("users", {
+  relations = {
+    {"recent_posts", fetch = function()
+      -- fetch some data
+    end}
+  }
+})
+```
+
+```moon
+import Model from require "lapis.db.models"
+class Users extends Model
+  @relations: {
+    {"recent_posts", fetch: =>
+      -- fetch some data
+    }
   }
 ```
 
