@@ -1226,7 +1226,7 @@ for page_results, page_num in paginated\each_page!
 local Model = require("lapis.db.model").Model
 local Posts = Model:extend("posts", {
   relations = {
-    user = "Users"
+    {"users", has_one = "Users"}
   }
 })
 ```
@@ -1235,7 +1235,7 @@ local Posts = Model:extend("posts", {
 import Model from require "lapis.db.models"
 class Posts extends Model
   @relations: {
-    user: "Users"
+    {"user", has_one: "Users"}
   }
 ```
 
