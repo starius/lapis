@@ -1532,6 +1532,75 @@ class Users extends Model
   }
 ```
 
+## Enum
+
+Функция `enum` принимает таблицу Lua, сопоставляющую
+именам целочисленные константы. Служит для полей-перечислений
+в моделях. Состояние закодировано в форме числа.
+
+```lua
+local model = require("lapis.db.model")
+local Model, enum = model.Model, model.enum
+
+local Posts = Model:extend("posts")
+Posts.statuses = enum {
+  pending = 1,
+  public = 2,
+  private = 3,
+  deleted = 4
+}
+```
+
+```moon
+import Model, enum from require "lapis.db.model"
+
+class Posts extends Model
+  @statuses: enum {
+    pending: 1
+    public: 2
+    private: 3
+    deleted: 4
+  }
+```
+
+```lua
+assert(Posts.statuses[1] == "pending")
+assert(Posts.statuses[3] == "private")
+
+assert(Posts.statuses.public == 2)
+assert(Posts.statuses.deleted == 4)
+
+assert(Posts.statuses:for_db("private") == 3)
+assert(Posts.statuses:for_db(3) == 3)
+
+assert(Posts.statuses:to_name(1) == "pending")
+assert(Posts.statuses:to_name("pending") == "pending")
+
+-- using to_name or for_db with undefined enum value throws error
+
+Posts.statuses:to_name(232) -- erorr
+Posts.statuses:for_db("hello") -- erorr
+```
+
+```moon
+assert Posts.statuses[1] == "pending"
+assert Posts.statuses[3] == "private"
+
+assert Posts.statuses.public == 2
+assert Posts.statuses.deleted == 4
+
+assert Posts.statuses\for_db("private") == 3
+assert Posts.statuses\for_db(3) == 3
+
+assert Posts.statuses\to_name(1) == "pending"
+assert Posts.statuses\to_name("pending") == "pending"
+
+-- using to_name or for_db with undefined enum value throws error
+
+Posts.statuses\to_name 232 -- erorr
+Posts.statuses\for_db "hello" -- erorr
+```
+
 ### Получение списка полей таблицы
 
 Список полей таблицы можно получить с помощью
