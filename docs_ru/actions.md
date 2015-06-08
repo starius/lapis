@@ -275,7 +275,7 @@ config "development", ->
 автоматически подается в `write`. В предобработчике `write` имеет две
 функции: запись результата и отмена дальнейшего обработчика.
 
-### `url_for(name_or_obj, params)`
+### `url_for(name_or_obj, params, query_params=nil, ...)`
 
 Создаёт URL для `name_or_obj`.
 
@@ -305,9 +305,73 @@ end)
   @url_for "user_data", user_id: 123, data_field: "height"
 ```
 
+Если передан аргумент `query_params`, то его значение будет
+переведено в параметры запроса и добавлено в конец пути.
+
+```lua
+-- returns: /data/123/height?sort=asc
+self:url_for("user_data", { user_id = 123, data_field = "height"}, { sort = "asc" })
+```
+
+```moon
+-- returns: /data/123/height?sort=asc
+@url_for "user_data", { user_id: 123, data_field: "height"}, sort: "asc"
+```
+
+#### Передача объекта в `url_for`
+
 Если `name_or_obj` - таблица, тогда вызывается её метод `url_params`,
 в который подаётся объект-запрос и остальные аргументы, поданные в
 `url_for`. Результат работы `url_params` вновь подаётся в `url_for`.
+
+Пример: модель `Users`, для которой определен метод
+`url_params`.
+
+```lua
+local Users = Model:extend("users", {
+  url_params = function(self, req, ...)
+    return "user_profile", { id = self.id }, ...
+  end
+})
+```
+
+```moon
+class Users extends Model
+  url_params: (req, ...) =>
+    "user_profile", { id: @id }, ...
+```
+
+Теперь можно передать объекты модели `Users` в метод
+`url_for`, он вернёт путь к `user_profile`.
+
+```lua
+local user = Users:find(100)
+self:url_for(user)
+-- возвращает: /user-profile/100
+```
+
+```moon
+user = Users\find 100
+@url_for user
+-- возвращает: /user-profile/100
+```
+
+Мы передали `...` через функцию `url_params`, чтобы не сломать
+третий аргумент функции `query_params`:
+
+```lua
+local user = Users:find(1)
+self:url_for(user, { page = "likes" })
+-- возвращает: /user-profile/100?page=likes
+```
+
+```moon
+user = Users\find 1
+@url_for user, page: "likes"
+-- возвращает: /user-profile/100?page=likes
+```
+
+#### Метод `url_key`
 
 Значения параметров строкового типа дословно подставляются в URL.
 У параметров-таблиц вызывается метод `url_key`, результат которого
@@ -325,11 +389,39 @@ local Users = Model:extend("users", {
 })
 ```
 
-
 ```moon
 class Users extends Model
   url_key: (route_name) => @id
 ```
+
+Обычная генерация пути к профилю пользователя:
+
+```lua
+local user = Users:find(1)
+self:url_for("user_profile", {id = user.id})
+```
+
+```moon
+user = Users\find 1
+@url_for "user_profile", id: user.id
+```
+
+Благодаря методу `url_key`, можно передавать объекты `User`
+напрямую в значение `id`:
+
+```lua
+local user = Users:find(1)
+self:url_for("user_profile", {id = user})
+```
+
+```moon
+user = Users\find 1
+@url_for "user_profile", id: user
+```
+
+> Метод `url_key` принимает первым аргументом имя пути,
+> что позволяет принимать решение, что возвращать, в
+> зависимости от обрабатываемого пути
 
 ### `build_url(path, [options])`
 
