@@ -122,6 +122,79 @@ r1_status, r1_res, r1_headers = mock_request MyApp!, "/first_url"
 r2_status, r2_res = mock_request MyApp!, "/second_url", prev: r1_headers
 ```
 
+### Использование окружения `test`
+
+Если вы выполняете запросы к БД из тестов и не устанавливаете
+окружения, то они будут запускаться из текущего окружения.
+Окружение по умолчанию равно `development`, так что это может
+вызвать проблемы с отладочным состоянием БД. Предлагается
+сделать отдельное окружение `test` для исполнения тестов
+в отдельном соединении с БД.
+
+Добавить окружение с отдельными параметрами подключения к БД
+можно в <span class="for_moon">`config.moon`</span><span
+class="for_lua">`config.lua`</span>:
+
+> Узнайте больше в [разделе про настройку и
+> конфигурацию]($root/reference/configuration.html) и в [разделе
+> про настройку БД]($root/reference/configuration.html).
+
+```lua
+local config = require("lapis.config")
+
+-- другие конфигурации ...
+
+config("test", {
+  postgres = {
+    backend = "pgmoon",
+    database = "myapp_test"
+  }
+})
+
+```
+
+```moon
+-- config.moon
+config = require "lapis.config"
+
+-- другие конфигурации ...
+
+config "test", ->
+  postgres {
+    backend: "pgmoon"
+    database: "myapp_test"
+  }
+```
+
+> Не забудьте создать таблицы в тестовой БД
+> перед запуском тестов.
+
+Чтобы убедиться, что тесты запускаются в тестовом окружении,
+пишите код тестов под функцией `use_test_env`. Она устанавливает
+тестовое окружение до запуска теста и восстанавливает исходное
+окружение после.
+
+
+```lua
+local use_test_env = require("lapis.spec").use_test_env
+
+describe("my site", function()
+  use_test_env()
+
+  -- код тестов, использующих тестовое окружение
+end)
+```
+
+
+```moon
+import use_test_env from require "lapis.spec"
+
+describe "my_site", ->
+  use_test_env!
+
+  -- код тестов, использующих тестовое окружение
+```
+
 ## Тестовый сервер
 
 Хотя имитирование запросов имеет свои преимущества,
