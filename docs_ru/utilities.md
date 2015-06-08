@@ -372,7 +372,7 @@ app:get("/", function(self)
   -- заголовок content-type устанавливается в
   -- application/x-www-form-urlencoded
   http.simple("http://leafo.net/", {
-    name: "leafo"
+    name = "leafo"
   })
 
   -- вызов того же запроса вручную
@@ -382,7 +382,7 @@ app:get("/", function(self)
     headers = {
       "content-type" = "application/x-www-form-urlencoded"
     },
-    body: {
+    body = {
       name = "leafo"
     }
   })
