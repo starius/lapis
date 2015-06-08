@@ -81,7 +81,11 @@ class Followings extends Model
   @primary_key: { "user_id", "followed_user_id" }
 ```
 
-## Загрузка одной записи
+## Статические функции класса модели
+
+Статические функции класса модели используются для загрузки
+объектов из БД, создания новых объектов и для получения
+информации о таблице.
 
 Для примеров мы будем использовать
 следующие модели:
@@ -106,6 +110,8 @@ class Users extends Model
 class Tags extends Model
   @primary_key: {"user_id", "tag"}
 ```
+
+### `find(...)`
 
 Чтобы запросить из БД одну запись, используется статический
 метод `find` класса модели.
@@ -149,7 +155,7 @@ user = Users\find email: "person@example.com"
 SELECT * from "users" where "email" = 'person@example.com' limit 1
 ```
 
-## Загрузка нескольких записей таблицы
+### `select(query, ...)`
 
 Чтобы получить из БД сразу несколько записей таблицы,
 используется метод `select`.
@@ -171,6 +177,9 @@ SELECT * from "tags" where tag = 'merchant'
 ```
 
 Возвращает не один объект, а список объектов.
+Если в таблице нет объектов, удовлетворяющих запросу,
+то возвращает пустую таблицу.
+
 Чтобы загрузить только определённые поля,
 укажите их в поле `fields` таблицы, передаваемой
 последним аргументом:
@@ -187,6 +196,19 @@ tags = Tags\select "where tag = ?", "merchant", fields: "created_at as c"
 ```sql
 SELECT created_at as c from "tags" where tag = 'merchant'
 ```
+
+Содержимое опции `fields` подставляется в запрос буквально,
+поэтому не нужно включать в неё строки, пришедшие из
+недоверенных источников, чтобы не допустить SQL-инъекцию.
+Используйте [`db.escape_identifier`][1] для
+экранирования имён колонок.
+
+Метод `select` возвращает объекты, принадлежащие той модели,
+на которой его вызвали. Чтобы это изменить, укажите опцию
+`load`. Если её значение равно `false`, то метод вернёт
+объекты в форме простых таблиц Lua.
+
+### `find_all(primary_keys)`
 
 Чтобы загрузить несколько записей по их первичным ключам,
 воспользуйтесь методом `find_all`.
@@ -231,6 +253,9 @@ SELECT * from "UserProfile" where "user_id" in (1, 2, 3, 4, 5)
 * `fields` -- Список загружаемых полей через запятую
     (по умолчанию все: `*`)
 * `where` -- Дополнительное условие
+* `clause` -- Дополнительный код SQL, дописываемый к концу
+    запроса или список аргументов, передаваемых в
+    `db.interpolate_query`.
 
 Пример:
 
@@ -258,7 +283,26 @@ users = UserProfile\find_all {1,2,3,4}, {
 SELECT user_id, twitter_account from "things" where "user_id" in (1, 2, 3, 4) and "public" = TRUE
 ```
 
-## Добавление записей
+### `count(clause, ...)`
+
+Считает объекты, удовлетворяющие условиям.
+
+```lua
+local total = Users:count()
+local count = Users:count("username like '%' || ? || '%'", "leafo")
+```
+
+```moon
+total = Users\count!
+count = Users\count "username like '%' || ? || '%'", "leafo"
+```
+
+```sql
+SELECT COUNT(*) "users"
+SELECT COUNT(*) "users" where username like '%' || 'leafo' || '%'
+```
+
+### `create(values, create_opts=nil)`
 
 Новые записи добавляются в таблицу при помощи статического
 метода `create` класса модели.
@@ -267,7 +311,9 @@ SELECT user_id, twitter_account from "things" where "user_id" in (1, 2, 3, 4) an
 Возвращает созданный объект модели.
 Значения первичных ключей (в том числе автоинкрементных)
 записи добываются при помощи
-ключевого слова PostgreSQL `RETURN`.
+ключевого слова PostgreSQL `RETURNING`.
+
+> В MySQL вместо `RETURNING` используется *last insert id*
 
 ```lua
 local user = Users:create({
@@ -287,17 +333,151 @@ user = Users\create {
 INSERT INTO "users" ("password", "login") VALUES ('1234', 'superuser') RETURNING "id"
 ```
 
-Если одно из значений при создании объекта является `db.raw`,
-то их значения будут загружены из БД с помощью `RETURN`.
-Изначальные значения будут заменены значениями, загруженными
-из БД.
+Если одно из значений при создании объекта является
+[`db.raw`][raw], то их значения будут загружены из БД с
+помощью `RETURNING`. Изначальные значения будут заменены
+значениями, загруженными из БД.
+
+К примеру, создадим новый объект, у которого значение поля
+`position` равно значению, следующему за максимальным.
+
+```lua
+local user = Users:create({
+  position = db.raw("(select coalesce(max(position) + 1, 0) from users)")
+})
+```
+
+```moon
+user = Users\create {
+  position: db.raw "(select coalesce(max(position) + 1, 0) from users)"
+}
+```
+
+```sql
+INSERT INTO "users" (position)
+VALUES ((select coalesce(max(position) + 1, 0) from users))
+RETURNING "id", "position"
+```
+
+> Так как в MySQL нет `RETURNING`, этот работает только
+> с PostgreSQL
 
 Если модели присвоены ограничения, то они проверяются до
 попытки добавить объект в БД. Если ограничения не
 удовлетворены, то функция `create` возвращает nil и сообщение
 об ошибке.
 
-## Обновление записи
+Дополнительные опции метода `create`, которые можно передать
+в форме таблицы:
+
+* `returning` -- строка, содержащая список полей,
+    которые возвращает `RETURNING`
+
+### `columns()`
+
+Возвращает список полей таблицы, содержащий имена полей и
+их типы.
+
+```lua
+local cols = Users:columns()
+```
+
+```moon
+cols = Users\columns!
+```
+
+```sql
+SELECT column_name, data_type
+  FROM information_schema.columns WHERE table_name = 'users'
+```
+
+Выдача:
+
+
+```lua
+{
+  {
+    data_type = "integer",
+    column_name = "id"
+  },
+  {
+    data_type = "text",
+    column_name = "name"
+  }
+}
+```
+
+```moon
+{
+  {
+    data_type: "integer",
+    column_name: "id"
+  }
+  {
+    data_type: "text",
+    column_name: "name"
+  }
+}
+```
+
+> Формат выдачи MySQL может немного отличаться, но
+> включает ту же информацию.
+
+### `table_name()`
+
+Возвращает имя таблицы.
+
+```lua
+Model:extend("users"):table_name() --> "users"
+Model:extend("user_posts"):table_name() --> "user_posts"
+```
+
+```moon
+(class Users extends Model)\table_name! --> "users"
+(class UserPosts extends Model)\table_name! --> "user_posts"
+```
+
+<p class="for_moon">
+Этот статический метод можно переопределить, чтобы изменить
+имя таблицы.
+</p>
+
+```moon
+class Users extends Model
+  @table_name: => "active_users"
+```
+
+### `singular_name()`
+
+Возвращает имя таблицы в единственном числе.
+
+```lua
+Model:extend("users"):singular_name() --> "user"
+Model:extend("user_posts"):singular_name() --> "user_post"
+```
+
+```moon
+(class Users extends Model)\singular_name! --> "user"
+(class UserPosts extends Model)\singular_name! --> "user_post"
+```
+
+Этот метод используется другими функциями Lapis:
+`include_in` и отношениями `has_one` и `has_many`.
+
+### `include_in(model_instances, column_name, opts={})`
+
+Запрашивает объекты данной модели загружает их в массив
+объектов другой модели.
+См. [Предзагрузка связанных объектов][preloading].
+
+### `paginated(query, ...)`
+
+Делает то же, что `select`, но возвращает `Paginator`.
+См. [Пагинация][pagination].
+
+## Методы объектов модели
+
+### `update(...)`
 
 У объектов модели есть метод `update` для обновления
 записи.
@@ -357,10 +537,11 @@ UPDATE "users" SET "login" = 'uberuser', "email" = 'admin@example.com' WHERE "id
 > (ещё один способ вызвать первый вариант `update`)
 
 Если любое из обновляемых значений сгенерировано из SQL при
-помощи `db.raw`, то эти значения будут заменены на значения,
-которые вернула БД при помощи `RETURNING`.
+помощи [`db.raw`][raw], то эти значения будут заменены на
+значения, которые вернула БД при помощи `RETURNING`.
+См. [`create`][create].
 
-## Удаление записи
+### `delete()`
 
 Вызовите на объекте модели метод `delete`:
 
@@ -378,7 +559,80 @@ user\delete!
 DELETE FROM "users" WHERE "id" = 1
 ```
 
+Метод `delete` возвращает `true`, если объект действительно
+был удалён. Важно проверять это значение, чтобы избежать
+гонок при выполнении кода в ответ на удаление.
+
+Рассмотрим следующий код:
+
+```lua
+local user = Users:find()
+if user then
+  user:delete()
+  decrement_total_user_count()
+end
+```
+
+```moon
+user = Users\find 1
+if user
+  user\delete!
+  decrement_total_user_count!
+```
+
+Так как OpenResty асинхронен, существует вероятность того, что
+если эти два запроса попадут в этот блок кода примерно в одно
+время, то `delete` может быть вызван дважды. Само по себе это
+не является проблемой, но ведь функция
+`decrement_total_user_count` тоже будет вызвана дважды и
+испортит те данные, за которые она отвечает.
+
+### `refresh(...)`
+
+Загружает объект из базы данных заново.
+
+Данные в объекте модели могут устаревать из-за
+внешних изменений записи в БД.
+Перечитать данные из БД можно при помощи
+метода модели `refresh`.
+
+```moon
+class Posts extends Model
+post = Posts\find 1
+post\refresh!
+```
+
+```lua
+local Posts = Model:extend("posts")
+local post = Posts:find(1)
+post:refresh()
+```
+
+```sql
+SELECT * from "posts" where id = 1
+```
+
+По умолчанию перезагружаются все поля модели.
+В аргументах можно указать набор полей:
+
+```moon
+class Posts extends Model
+post = Posts\find 1
+post\refresh "color", "height"
+```
+
+```lua
+local Posts = Model:extend("posts")
+local post = Posts:find(1)
+post:refresh("color", "height")
+```
+
+```sql
+SELECT "color", "height" from "posts" where id = 1
+```
+
 ## Отметки времени
+
 Время создания и последнего изменения
 часто хранят в моделях. Модели Lapis могут автоматизировать
 управление такими полями.
@@ -593,6 +847,39 @@ SELECT * from "user_data" where "user_id" in (1,2,3,4,5,6)
 поле `user_data`.
 (Если бы имя таблицы было во множественном числе,
 то имя поля было в единственном.)
+
+И последний сценарий предзагрузки отношений "один-к-одному".
+Опция `many` указывает, что `include_in` должен загрузить
+много связанных объектов для данной модели. К примеру, мы
+загружаем все статьи каждого пользователя:
+
+```lua
+local users = Users:select()
+Posts:include_in(users, "user_id", { flip = true, many = true })
+```
+
+```moon
+users = Users\select!
+Posts\include_in users, "user_id", flip: true, many: true
+```
+
+```sql
+SELECT * from "posts" where "user_id" in (1,2,3,4,5,6)
+```
+
+Каждый пользователь получает дополнительное поле `posts`,
+в котором хранится список статей.
+
+Опции, которые поддерживает `include_in`:
+
+* `as` -- имя поля, в которое записывается связанный объект
+* `flip` -- если `true`, то внешний ключ находится во
+    включённой модели (а не в данной)
+* `where` -- список дополнительных условий, ограничивающих
+    запрос
+* `fields` -- список загружаемых полей включённой модели
+* `many` -- если `true`, то загружает много связанных
+    объектов, а не один
 
 ## Ограничения
 
@@ -826,6 +1113,31 @@ for page_results, page_num in paginated\each_page!
   print(page_results, page_num)
 ```
 
+> Будьте внимательны при одновременном обходе и изменении
+> объектов, чтобы не пропустить объект и не обработать
+> дважды
+
+### `has_items()`
+
+Возвращает, не пуст ли пагинатор, т.е. есть ли в нём хотя бы
+один объект. Более эффективен, чем подсчёт объектов, так как
+не вызывает запросов, производящих подсчёт.
+
+```lua
+if pager:has_items() then
+  -- ...
+end
+```
+
+```moon
+if pager\has_items!
+  -- ...
+```
+
+```sql
+SELECT 1 FROM "users" where group_id = 123 limit 1
+```
+
 ## Описание отношений моделей
 
 Часто модели ссылаются друг на друга с помощью *внешних
@@ -878,7 +1190,7 @@ SELECT * from "users" where "id" = 123;
 
 Виды отношений:
 
-## `belongs_to`
+### `belongs_to`
 
 Отношение "один-к-одному". Внешний ключ расположен в
 ссылающейся модели.
@@ -926,13 +1238,13 @@ SELECT * from "users" where "user_id" = 123;
 ```
 
 Отношение `belongs_to` может содержать опцию `key`,
-которая меняет поле текущей модели, в котором находится
+которая меняет поле данной модели, в котором находится
 вторичный ключ.
 
-## `has_one`
+### `has_one`
 
 Тоже "один-к-одному", но вторичный ключ находится в связанной
-модели и указывает на текущую модель.
+модели и указывает на данную модель.
 
 ```lua
 local Model = require("lapis.db.model").Model
@@ -1003,7 +1315,7 @@ profile = user\get_user_profile!
 SELECT * from "user_profiles" where "owner_id" = 123;
 ```
 
-## `has_many`
+### `has_many`
 
 Отношение "один-к-многим". Определяет два метода: один
 возвращает [объект `Pager`](#pagination), а другой -
@@ -1113,7 +1425,7 @@ posts = user\get_authored_posts!
 SELECT * from "posts" where "poster_id" = 123 and deleted = FALSE order by id desc
 ```
 
-## `fetch`
+### `fetch`
 
 Произвольное отношение, определенное функцией, возвращающей
 связанные данные. Результат запоминается.
@@ -1141,7 +1453,7 @@ class Users extends Model
   }
 ```
 
-# Enum
+## Enum
 
 Функция `enum` принимает таблицу Lua, сопоставляющую
 именам целочисленные константы. Служит для полей-перечислений
@@ -1210,69 +1522,8 @@ Posts.statuses\to_name 232 -- erorr
 Posts.statuses\for_db "hello" -- erorr
 ```
 
-## Получение списка полей таблицы
 
-Список полей таблицы можно получить с помощью
-метода `columns`:
-
-```lua
-local Posts = Model:extend("posts")
-for _, col in ipairs(Posts:columns()) do
-  print(col.column_name, col.data_type)
-end
-```
-
-```moon
-class Posts extends Model
-
-for {column_name, data_type} in Posts\columns!
-  print column_name, data_type
-```
-
-```sql
-SELECT column_name, data_type
-  FROM information_schema.columns WHERE table_name = 'posts'
-```
-
-## Перезагрузка данных в объекте модели
-
-Данные в объекте модели могут устаревать из-за
-внешних изменений записи в БД.
-Перечитать данные из БД можно при помощи
-метода модели `refresh`.
-
-```moon
-class Posts extends Model
-post = Posts\find 1
-post\refresh!
-```
-
-```lua
-local Posts = Model:extend("posts")
-local post = Posts:find(1)
-post:refresh()
-```
-
-```sql
-SELECT * from "posts" where id = 1
-```
-
-По умолчанию перезагружаются все поля модели.
-В аргументах можно указать набор полей:
-
-
-```moon
-class Posts extends Model
-post = Posts\find 1
-post\refresh "color", "height"
-```
-
-```lua
-local Posts = Model:extend("posts")
-local post = Posts:find(1)
-post:refresh("color", "height")
-```
-
-```sql
-SELECT "color", "height" from "posts" where id = 1
-```
+[1]: database.html#query-interface-escape_identifierstr
+[raw]: database.html#query-interface-rawstr
+[preloading]: #preloading-associationws
+[create]: #create
