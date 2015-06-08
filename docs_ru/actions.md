@@ -86,6 +86,241 @@ class extends lapis.Application
 В настоящий момент ошибочно дописывать что-то после звёздочки,
 так как звёздочка захватывает все символы.
 
+## Именованные пути
+
+Полезно давать имена путям, чтобы генерировать URL по этим
+именам, а не зашивать URL в ссылках с других старниц.
+
+<span class="for_moon">
+Если путь обработчика является таблицей с единственной
+парой ключ-значение, то эта пара воспринимается как
+имя и путь паттерна.
+MoonScript предоставляет удобный синтаксис для этого:
+</span><span class="for_lua">
+Каждый метод приложения, который определяет новый путь,
+имеет второй вариант, в котором имя пути передаётся
+первым аргументом:
+</span>
+
+```lua
+local lapis = require("lapis")
+local app = lapis.Application()
+
+app:match("index", "/", function(self)
+  return self:url_for("user_profile", { name = "leaf" })
+end)
+
+app:match("user_profile", "/", function(self)
+  return "Hello " .. self.params.name .. ", go home: " .. self:url_for("index")
+end)
+```
+
+```moon
+lapis = require "lapis"
+
+class extends lapis.Application
+  [index: "/"]: =>
+    @url_for "user_profile", name: "leaf"
+
+  [user_profile: "/user/:name"]: =>
+    "Hello #{@params.name}, go home: #{@url_for "index"}"
+```
+
+Пути различных обработчиков можно генерировать при помощи
+<span class="for_moon">`@url_for`</span><span class="for_lua">
+`self:url_for()`</span>. Первый аргумент - имя пути, а второй
+дополнительный аргумент - таблица значений, которые
+подставляются в именованные пареметры пути.
+
+## Обработка методов HTTP
+
+Часто обработчик одного пути делает разные вещи
+в зависимости от метода HTTP.
+В Lapis есть функции-помощники, которые упрощают
+написание таких обработчиков.
+Функция `respond_to` принимает таблицу, переводящую метод
+HTTP в функцию, которая выполняется для запросов
+с этим методом HTTP.
+
+```lua
+local lapis = require("lapis")
+local app = lapis.Application()
+
+app:match("create_account", "/create-account", respond_to({
+  GET = function(self)
+    return { render = true }
+  end,
+  POST = function(self)
+    do_something(self.params)
+    return { redirect_to = self:url_for("index") }
+  end
+}))
+```
+
+```moon
+lapis = require "lapis"
+import respond_to from require "lapis.application"
+
+class App extends lapis.Application
+  [create_account: "/create-account"]: respond_to {
+    GET: => render: true
+
+    POST: =>
+      do_something @params
+      redirect_to: @url_for "index"
+  }
+```
+
+В `respond_to` можно также прописать предобработчик, который
+вызывается до обработчика метода HTTP.
+Для этого в таблице нужно указать функцию с ключом `before`.
+Здесь применяется та же логика, что в
+[предобработчиках](#lapis-applications-before-filters),
+так что можно вызвать <span class="for_moon">`@write`</span>
+<span class="for_lua">`self:write()`</span> и сам обработчик
+отменится.
+
+```lua
+local lapis = require("lapis")
+local app = lapis.Application()
+
+app:match("edit_user", "/edit-user/:id", respond_to({
+  before = function(self)
+    self.user = Users:find(self.params.id)
+    if not self.user then
+      self:write({"Not Found", status = 404})
+    end
+  end,
+  GET = function(self)
+    return "Edit account " .. self.user.name
+  end,
+  POST = function(self)
+    self.user:update(self.params.user)
+    return { redirect_to = self:url_for("index") }
+  end
+}))
+```
+
+```moon
+lapis = require "lapis"
+import respond_to from require "lapis.application"
+
+class App extends lapis.Application
+  "/edit_user/:id": respond_to {
+    before: =>
+      @user = Users\find @params.id
+      @write status: 404, "Not Found" unless @user
+
+    GET: =>
+      "Edit account #{@user.name}..."
+
+    POST: =>
+      @user\update @params.user
+      redirect_to: @url_for "index"
+  }
+```
+
+Запрос типа `POST`, если его заголовок `Content-type` равен
+`application/x-www-form-urlencoded`, разбирается и помещается в
+<span class="for_moon">`@params`</span><span
+class="for_lua">`self.params`</span> вне зависимости от того,
+используется ли `respond_to`.
+
+<span class="for_lua">
+Методы `app:get()` и `app:post()` -- обёртки для `respond_to`,
+позволяющие установить обработчик для определенного кода HTTP.
+Такие обёртки существуют для всех распространённых кодов HTTP:
+`get`, `post`, `delete`, `put`.
+Для остальных используйте `respond_to`.
+</span>
+
+```lua
+app:get("/test", function(self)
+  return "Я отвечаю только на GET-запросы"
+end)
+
+app:delete("/delete-account", function(self)
+  -- удалить!
+end)
+```
+
+
+## Предобработчики
+
+Бывает нужно выполнять какие-то действия перед каждым запросом.
+К примеру, открыть пользовательскую сессию.
+Для этого надо задать предобработчик, то есть функцию, которая
+запускается перед каждым обработчиком:
+
+```lua
+local app = lapis.Application()
+
+app:before_filter(function(self)
+  if self.session.user then
+    self.current_user = load_user(self.session.user)
+  end
+end)
+
+app:match("/", function(self)
+  return "current user is: " .. tostring(self.current_user)
+end)
+```
+
+```moon
+lapis = require "lapis"
+
+class App extends lapis.Application
+  @before_filter =>
+    if @session.user
+      @current_user = load_user @session.user
+
+  "/": =>
+    "current user is: #{@current_user}"
+```
+
+Можно задать несколько предобработчков, для этого нужно
+вызвать <span class="for_moon">`@before_filter`</span><span
+class="for_lua">`app:before_filter`</span> несколько раз.
+Множественные предобработчики запускаются в том порядке,
+в котором их добавили.
+
+Если предобработчик вызывает метод <span class="for_moon">
+`@write`</span><span class="for_lua">`self:write()`</span>,
+то обработчик отменяется.
+Например, мы можем отменить обработчик и перенаправить
+пользователя на другую страницу, если какое-то условие
+не выполняется:
+
+```lua
+local app = lapis.Application()
+
+app:before_filter(function(self)
+  if not user_meets_requirements() then
+    self:write({redirect_to = self:url_for("login")})
+  end
+end)
+
+app:match("login", "/login", function(self)
+  -- ...
+end)
+```
+
+```moon
+lapis = require "lapis"
+
+class App extends lapis.Application
+  @before_filter =>
+    unless user_meets_requirements!
+      @write redirect_to: @url_for "login"
+
+  [login: "/login"]: => ...
+```
+
+> Результат обработчика также подаётся в
+> <span class="for_moon">`@write`</span><span class="for_lua">
+> `self:write()`</span>, так что в него можно подавать всё то,
+> что можно вернуть из обработчика
+
 ## Объект-запрос
 
 Каждому обработчику подается *объект-запрос* в качестве первого аргумента.
