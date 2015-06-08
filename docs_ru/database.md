@@ -288,6 +288,31 @@ db.update "the_table", {
 UPDATE "the_table" SET "count" = count + 1 WHERE count < 10
 ```
 
+Если условия заданы в форме таблицы Lua, то все дополнительные
+аргументы передаются в `RETURNING`:
+
+```lua
+db.update("cats", {
+  count = db.raw("count + 1")
+}, {
+  id = 1200
+}, "count")
+```
+
+```moon
+db.update "cats", {
+  count: db.raw "count + 1"
+}, {
+  id: 1200
+}, "count"
+```
+
+```sql
+UPDATE "cats" SET "count" = count + 1, WHERE "id" = 1200 RETURNING count
+```
+
+> `RETURNING` работает в PostgreSQL, но не в MySQL
+
 ### `delete(table, conditions, params...)`
 
 Удаляет записи таблицы, удовлетворяющие условиям `conditions`.
