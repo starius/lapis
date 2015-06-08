@@ -87,7 +87,7 @@ app:match("index", "/", function()
   return { render: true }
 end)
 
-reutrn app
+return app
 ```
 
 ```moon
