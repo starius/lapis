@@ -1173,7 +1173,7 @@ end
 
 ```moon
 if pager\has_items!
-  -- ...
+  return smth
 ```
 
 ```sql
