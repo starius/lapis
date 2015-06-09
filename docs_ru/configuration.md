@@ -45,7 +45,7 @@ config("development", {
 config("production", {
   port = 80,
   num_workers = 4,
-  lua_code_cache = "off"
+  code_cache = "on"
 })
 
 ```
@@ -61,7 +61,7 @@ config "development", ->
 config "production", ->
   port 80
   num_workers 4
-  lua_code_cache "off"
+  code_cache "on"
 
 ```
 
