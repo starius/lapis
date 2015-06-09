@@ -288,7 +288,7 @@ local csrf = require("lapis.csrf")
 csrf = require "lapis.csrf"
 ```
 
-###  `generate_token(req, key=nil, expires=os.time! + 28800)`
+###  `generate_token(req, key=nil, expires=os.time() + 28800)`
 
 Создаёт CSRF-токен, используя ключ приложения.
 Чтобы прикрепить CSRF-токен к определённой форме,
