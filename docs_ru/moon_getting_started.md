@@ -117,6 +117,7 @@ Lapis - библиотека для двух языков программиро
 
 ```moon
 lapis = require "lapis"
+import respond_to from require "lapis.application"
 
 class App extends lapis.Application
   "/hello": => "Hello World!"
