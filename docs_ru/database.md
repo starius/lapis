@@ -2,8 +2,9 @@ title: Работа с базой данных
 --
 # Работа с базой данных
 
-Lapis использует
-[БД PostgreSQL](http://www.postgresql.org/).
+Lapis использует БД
+[PostgreSQL](http://www.postgresql.org/) и
+[MySQL](http://www.mysql.com/).
 Планируется поддержка других БД.
 Вместо API, который предоставляет Lapis,
 можно напрямую использовать API OpenResty.
@@ -19,6 +20,9 @@ API](http://wiki.nginx.org/HttpLuaModule#ngx.socket.tcp).
 Соединения с сервером объединяются в пул для
 большей эффективности.
 
+В зависимости от выбранного типа базы данных,
+используется одна из библиотек взаимодействия с БД.
+
 [*pgmoon*](https://github.com/leafo/pgmoon) -
 драйвер PostgreSQL,
 который использует Lapis. Достоинством этого драйвера является
@@ -26,18 +30,24 @@ API](http://wiki.nginx.org/HttpLuaModule#ngx.socket.tcp).
 (OpenResty cosocket),
 так и синхронно (LuaSocket) с командной строки.
 
+Для MySQL используются следующие две библиотеки.
+При работе из сервера используется
+[lua-resty-mysql](https://github.com/openresty/lua-resty-mysql),
+а при работе с командной строки
+[LuaSQL](http://keplerproject.github.io/luasql/doc/us/).
+
 ## Установление соединения
 
-В секции `postgres` файла конфигурации
+Если вы используете PostgreSQL, создайте секцию `postgres`
+файла конфигурации
 <span class="for_moon">`config.moon`</span>
 <span class="for_lua">`config.lua`</span>.
-задаются параметры подключения к БД:
+Задаются параметры подключения к БД:
 
 ```lua
 -- config.lua
 config("development", {
   postgres = {
-    backend = "pgmoon",
     host = "127.0.0.1",
     user = "pg_user",
     password = "the_password",
@@ -50,7 +60,6 @@ config("development", {
 -- config.moon
 config "development", ->
   postgres ->
-    backend "pgmoon"
     host "127.0.0.1"
     user "pg_user"
     password "the_password"
@@ -63,6 +72,30 @@ port `5432`.
 в файле конфигурации их можно пропустить.
 Если используется нестандартный порт,
 его надо приписать к адресу: `my_host:1234`.
+
+Если вы используете MySQL, то создайте секцию `mysql`:
+
+```lua
+-- config.lua
+config("development", {
+  mysql = {
+    host = "127.0.0.1",
+    user = "mysql_user",
+    password = "the_password",
+    database = "my_database"
+  }
+})
+```
+
+```moon
+-- config.moon
+config "development", ->
+  mysql ->
+    host "127.0.0.1"
+    user "mysql_user"
+    password "the_password"
+    database "my_database"
+```
 
 Перейдём к запросам.
 
@@ -177,10 +210,8 @@ UPDATE things SET color = 'blue'
 INSERT INTO cats (age, name, alive) VALUES (25, 'dogman', TRUE)
 ```
 
-Если запрос завершается с ошибой,
-то срабатывает ошибка Lua,
-в которую включается сообщение об ошибке от PostgreSQL
-и сам запрос.
+Если запрос завершается с ошибой, то срабатывает ошибка Lua,
+в которую включается сообщение об ошибке от БД и сам запрос.
 
 ### `select(query, params...)`
 
