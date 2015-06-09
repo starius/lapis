@@ -91,8 +91,8 @@ config {"development", "production"}, ->
 У Lua и MoonScript есть свои особенности,
 см. следующие разделы.
 
-* [MoonScript configuration syntax][0]
-* [Lua configuration syntax][0]
+* [Синтаксис конфигурации на MoonScript][0]
+* [Синтаксис конфигурации на Lua][1]
 
 ## Конфигурация Nginx
 
@@ -293,4 +293,5 @@ class App extends lapis.Application
   -- ...
 ```
 
-
+[0]: $root/reference/moon_creating_configurations.html
+[1]: $root/reference/lua_creating_configurations.html
