@@ -369,6 +369,45 @@ UPDATE "the_table" SET "count" = count + 1
 SELECT * from another_table where x = now()
 ```
 
+### `list({values...})`
+
+Возвращает специальное значение, которое будет вставлено в
+SQL-запрос в форме списка SQL. Принимает один аргумент -
+таблицу.
+
+Значение, которое возвращает эта функция, можно использовать
+вместо обычных значений, передаваемых в функцию SQL-запроса.
+Каждый элемент списка экранируется при помощи `escape_literal`
+перед подстановкой в запрос.
+
+Результат этой функции можно использовать в подстановке и
+в условии при вызове `db.update`.
+
+```lua
+local ids = db.list({3,2,1,5})
+local res = db.select("* from another table where id in ?", ids)
+
+db.update("the_table", {
+  height = 55
+}, {
+  id = ids
+})
+```
+
+```moon
+ids = db.list {3,2,1,5}
+res = db.select "* from another table where id in ?", ids
+
+db.update "the_table", {
+  height: 55
+}, { :ids }
+```
+
+```sql
+SELECT * from another table where id in (3, 2, 1, 5)
+UPDATE "the_table" SET "height" = 55 WHERE "ids" IN (3, 2, 1, 5)
+```
+
 ### `escape_literal(value)`
 
 Экранирует значение для запроса.
