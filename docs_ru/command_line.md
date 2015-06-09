@@ -123,7 +123,7 @@ $ lapis migrate [environment]
 
 Для этой команды нужен модуль `migrations`.
 См. также [руководство по
-миграциям](#database-migrations-running-migrations).
+миграциям](database.html#migracii-bd).
 
 Выполняется примерно такой код:
 

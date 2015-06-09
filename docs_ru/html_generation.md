@@ -217,7 +217,7 @@ class extends lapis.Application
 
 Лучше избегать по возможности ручного отображения виджетов.
 В обработчиках используйте
-[опцию запроса](#request-object-request-options) `render`.
+[опцию запроса][render] `render`.
 При отображении из других виджетов используйте
 вспомогательную функцию `widget`.
 В обоих случаях используется общий выходной буфер,
@@ -399,3 +399,4 @@ print render_html ->
  * `"` -- `&quot;`
  * `'` -- `&#039;`
 
+[render]: actions.html#opcii-otobrazheniya

@@ -931,8 +931,7 @@ import create_table, types from require "lapis.db.schema"
 Затем она применит все миграции,
 которые не применялись прежде.
 
-См. подробнее про
-[команду миграции](#command-line-interface-lapis-migrate).
+См. подробнее про [команду миграции](command_line.html).
 
 ### Запуск миграций вручную
 

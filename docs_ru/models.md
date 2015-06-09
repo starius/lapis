@@ -992,8 +992,7 @@ assert Users\create {
 возвращает специальный объект `Paginator`.
 
 Допустим, у нас есть следующие таблица и модель:
-(как создавать таблицы. см
-[следующий раздел](#database-schemas-creating-and-dropping-tables)):
+(см. [как создавать таблицы][database-create]):
 
 ```lua
 create_table("users", {
@@ -1360,7 +1359,7 @@ SELECT * from "user_profiles" where "owner_id" = 123;
 ### `has_many`
 
 Отношение "один-к-многим". Определяет два метода: один
-возвращает [объект `Pager`](#pagination), а другой -
+возвращает [объект `Pager`](#paginaciya), а другой -
 возвращает все объекты.
 
 ```lua
@@ -1565,7 +1564,8 @@ Posts.statuses\for_db "hello" -- erorr
 ```
 
 
-[1]: database.html#query-interface-escape_identifierstr
-[raw]: database.html#query-interface-rawstr
-[preloading]: #preloading-associationws
-[create]: #create
+[1]: database.html#query-interface-escape-identifier-str
+[raw]: database.html#query-interface-raw-str
+[preloading]: #predzagruzka-svyazannyh-obektov
+[create]: #staticheskie-funkcii-klassa-modeli-create-values-create-opts-nil
+[database-create]: database.html#struktura-bd-sozdanie-i-udalenie-tablic

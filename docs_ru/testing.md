@@ -141,7 +141,7 @@ class="for_lua">`config.lua`</span>:
 
 > Узнайте больше в [разделе про настройку и
 > конфигурацию]($root/reference/configuration.html) и в [разделе
-> про настройку БД]($root/reference/configuration.html).
+> про настройку БД]($root/reference/database.html).
 
 ```lua
 local config = require("lapis.config")

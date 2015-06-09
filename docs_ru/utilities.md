@@ -275,7 +275,7 @@ class extends lapis.Application
 ```
 
 > Если надо защитить от CSRF много форм, имеет смысл создать
-> [предобработчик](moon_getting_started.html),
+> [предобработчик](actions.html#predobrabotchiki),
 > создающий CSRF-токен
 
 В модуле CSRF определены следующие функции:
