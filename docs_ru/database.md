@@ -407,6 +407,24 @@ res = db.query "select * from #{table_name}"
 Не надо использовать `escape_identifier` для экранирования
 значений. Экранируйте значения при помощи `escape_literal`.
 
+#### `interpolate_query(query, ...)`
+
+Принимает запрос с местами для подстановки (`?`) и делает
+подстановку остальных аргументов, экрания их с помощью
+`escape_literal`.
+
+```lua
+local q = "select * from table"
+q = q .. db.interpolate_query("where value = ?", 42)
+local res = db.query(q)
+```
+
+```moon
+q = "select * from table"
+q ..= db.interpolate_query "where value = ?", 42
+res = db.query q
+```
+
 ### Константы
 
 Доступны следующие константы:
@@ -879,4 +897,26 @@ migrations.run_migrations(require("migrations"))
 ```moon
 import run_migrations from require "lapis.db.migrations"
 run_migrations require "migrations"
+```
+
+## Вспомогательные функции для работы с базой данных
+
+Эти вспомогательные функции из модуля `db` не связаны напрямую
+с интерфейсом запроса.
+
+#### `format_date(time)`
+
+Возвращает дату в виде строки для подстановки в запрос.
+
+Аргумент `time` необязательный; если его не указать,
+используется текущее время UTC.
+
+```lua
+local date = db.format_date()
+db.query("update things set published_at = ?", date)
+```
+
+```moon
+date = db.format_date!
+db.query "update things set published_at = ?", date
 ```
