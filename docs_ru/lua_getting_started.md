@@ -255,10 +255,14 @@ app.layout = require "views.layout"
 Как отмечалось выше, etlua берет на себя работу по
 превращению файла `.etlua` в объект Lua.
 
+## Далее
+
+Прочитайте раздел [Запросы и обработчики][5], чтобы узнать,
+как Lapis обрабатывает HTTP-запросы и как писать для них ответы.
 
 [1]: https://github.com/leafo/etlua
 [2]: getting_started.html
 [3]: configuration.html
 [4]: etlua_templates.html
-
+[5]: $root/reference/actions.html
 
