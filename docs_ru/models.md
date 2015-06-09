@@ -820,7 +820,7 @@ class UserData extends Model
 
 ```lua
 local users = Users:select()
-UserData:include_in(users, "user_id", { flip: true })
+UserData:include_in(users, "user_id", { flip = true })
 
 print(users[1].user_data.twitter_account)
 ```
