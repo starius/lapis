@@ -26,13 +26,18 @@ title: Запросы и обработчики
 
 
 ```lua
+local lapis = require("lapis")
+local app = lapis.Application()
+
 app:match("/", function(self) end)
 app:match("/hello", function(self) end)
 app:match("/users/all", function(self) end)
 ```
 
 ```moon
-class extends lapis.Application
+lapis = require "lapis"
+
+class App extends lapis.Application
   "/": =>
   "/hello": =>
   "/users/all": =>
@@ -53,14 +58,21 @@ class extends lapis.Application
 app:match("/page/:page", function(self)
   print(self.params.page)
 end)
+
 app:match("/post/:post_id/:post_name", function(self) end)
 ```
 
 ```moon
-class extends lapis.Application
+lapis = require "lapis"
+
+class App extends lapis.Application
   "/page/:page": => print @params.page
   "/post/:post_id/:post_name": =>
 ```
+
+> В этом примере мы использовали `print` для отладки. Если
+> `print` вызовать из OpenResty, то его выдача попадает в
+> лог nginx'а.
 
 Захваченные значения параметров сохраняются в поле `params` запроса.
 `self.params` является таблицей, в которой ключами служат имена
@@ -78,7 +90,9 @@ app:match("/user/:name/file/*", function(self) end)
 ```
 
 ```moon
-class extends lapis.Application
+lapis = require "lapis"
+
+class App extends lapis.Application
   "/browse/*": =>
     print @params.splat
 
@@ -121,7 +135,7 @@ end)
 ```moon
 lapis = require "lapis"
 
-class extends lapis.Application
+class App extends lapis.Application
   [index: "/"]: =>
     @url_for "user_profile", name: "leaf"
 
@@ -423,7 +437,7 @@ end)
 ```moon
 date = require "date"
 
-class extends lapis.Application
+class App extends lapis.Application
   cookie_attributes: (name, value) =>
     expires = date(true)\adddays(365)\fmt "${http}"
     "Expires=#{expires}; Path=/; HttpOnly"
@@ -730,7 +744,9 @@ end)
 ```
 
 ```moon
-class extends lapis.Application
+lapis = require "lapis"
+
+class App extends lapis.Application
   "/hello": =>
     json: { hello: "world!" }
 ```
@@ -801,7 +817,7 @@ end
 ```
 
 ```moon
-class extends lapis.Application
+class App extends lapis.Application
   default_route: =>
     ngx.log ngx.NOTICE, "User hit unknown path #{@req.parsed_url.path}"
     @super!
@@ -836,7 +852,7 @@ end
 ```
 
 ```moon
-class extends lapis.Application
+class App extends lapis.Application
   handle_404: =>
     status: 404, layout: false, "Not Found!"
 ```
@@ -867,7 +883,7 @@ end
 ```
 
 ```moon
-class extends lapis.Application
+class App extends lapis.Application
   handle_error: (err, trace) =>
     ngx.log ngx.NOTICE, "There was an error! #{err}: #{trace}"
     super!
