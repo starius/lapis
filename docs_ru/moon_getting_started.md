@@ -22,7 +22,6 @@ lapis = require "lapis"
 class extends lapis.Application
   "/": =>
     "Welcome to Lapis #{require "lapis.version"}!"
-]]
 ```
 
 Здесь определеляется обычный модуль Lua, который возвращает

@@ -155,6 +155,21 @@ user = Users\find email: "person@example.com"
 SELECT * from "users" where "email" = 'person@example.com' limit 1
 ```
 
+Можно использовать `db.raw` для подстановки SQL.
+Поиск без учёта регистра:
+
+```lua
+local user = Users:find({ [db.raw("lower(email)")] = some_email:lower() })
+```
+
+```moon
+user = Users\find [db.raw "lower(email)"]: some_email\lower!
+```
+
+```sql
+SELECT * from "users" where lower(email) = 'person@example.com' limit 1
+```
+
 ### `select(query, ...)`
 
 Чтобы получить из БД сразу несколько записей таблицы,
@@ -648,9 +663,36 @@ CREATE TABLE ... (
 )
 ```
 
+Это можно сделать из Lapis:
+
+```lua
+local schema = require "lapis.db.schema"
+
+scehma.create_table("some_table", {
+  -- ...
+  {"created_at", schema.types.time},
+  {"updated_at", schema.types.time}
+  -- ...
+})
+```
+
+```moon
+import types, create_table from require "lapis.db.schema"
+
+create_table "some_table", {
+  -- ...
+  {"created_at", types.time}
+  {"updated_at", types.time}
+  -- ...
+}
+```
+
+Время в обоих полях хранится без учёта временной зоны.
+Lapis хранит `created_at` и `updated_at` в UTC.
+
 Установите значение
 <span class="for_moon">статического поля `@timestamp`</span>
-<span class="for_lua">свойства `@timestamp`</span>
+<span class="for_lua">свойства `timestamp`</span>
 в значение `true`:
 
 ```lua
@@ -777,7 +819,7 @@ SELECT * from "users" where "id" in (1,2,3,4,5,6)
 
 
 ```lua
-Users:include_in(posts, "user_id", { as: "author" })
+Users:include_in(posts, "user_id", { as = "author" })
 ```
 
 ```moon
@@ -896,7 +938,7 @@ local Model = require("lapis.db.model").Model
 local Users = Model:extend("users", {
   constraints = {
     name = function(self, value)
-      if value:lower() == "admin"
+      if value:lower() == "admin" then
         return "User can not be named admin"
       end
     end

@@ -179,8 +179,8 @@ encoding = require "lapis.util.encoding"
 ```lua
 local models = autoload("models")
 
-models.HelloWorld --> will require "models.hello_world"
-models.foo_bar --> will require "models.foo_bar"
+local _ = models.HelloWorld --> will require "models.hello_world"
+local _ = models.foo_bar --> will require "models.foo_bar"
 ```
 
 ```moon
@@ -252,7 +252,7 @@ end)
 
 app:post("form", "/form", capture_errors(function(self)
   csrf.assert_token(self)
-  "The form is valid!"
+  return "The form is valid!"
 end))
 ```
 
@@ -649,7 +649,7 @@ local app = lapis.Application()
 
 app:post("/my_action", function(self)
   assert_valid(self.params, {
-    { "uploaded_file", is_file: true }
+    { "uploaded_file", is_file = true }
   })
 
   -- файл готов к использованию

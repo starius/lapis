@@ -59,7 +59,7 @@ app:match("/post/:post_id/:post_name", function(self) end)
 ```moon
 class extends lapis.Application
   "/page/:page": => print @params.page
-  "/post/:post_id/:post_name" =>
+  "/post/:post_id/:post_name": =>
 ```
 
 Захваченные значения параметров сохраняются в поле `params` запроса.
@@ -79,8 +79,11 @@ app:match("/user/:name/file/*", function(self) end)
 
 ```moon
 class extends lapis.Application
-  "/browse/*": => print @params.splat
-  "/user/:name/file/*" =>
+  "/browse/*": =>
+    print @params.splat
+
+  "/user/:name/file/*": =>
+    print @params.name, @params.splat
 ```
 
 В настоящий момент ошибочно дописывать что-то после звёздочки,
@@ -757,7 +760,12 @@ app.default_route = function(self)
   -- strip trailing /
   if self.req.parsed_url.path:match("./$") then
     local stripped = self.req.parsed_url:match("^(.+)/+$")
-    return { redirect_to = self:build_url(stripped, {query: self.req.parsed_url.query, status: 301}) }
+    return {
+      redirect_to = self:build_url(stripped, {
+        status = 301,
+        query = self.req.parsed_url.query,
+      })
+    }
   else
     self.app.handle_404(self)
   end

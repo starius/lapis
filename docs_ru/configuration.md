@@ -202,7 +202,7 @@ default_config = {
 
 ```lua
 {
-  queries = true
+  queries = true,
   requests = true
 }
 ```
