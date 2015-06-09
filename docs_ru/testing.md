@@ -51,6 +51,7 @@ status, body, headers = mock_request(app, url, options)
 ```lua
 local lapis = require("lapis.application")
 local mock_request = require("lapis.spec.request").mock_request
+local use_test_env = require("lapis.spec").use_test_env
 
 local app = lapis.Application()
 
@@ -73,11 +74,14 @@ end)
 lapis = require "lapis"
 
 import mock_request from require "lapis.spec.request"
+import use_test_env from require "lapis.spec"
 
 class App extends lapis.Application
   "/hello": => "Добро пожаловать"
 
 describe "my application", ->
+  use_test_env!
+
   it "should make a request", ->
     status, body = mock_request App, "/hello"
 
@@ -215,23 +219,14 @@ Lapis заменяется на `test`. Если вы сделали тесто�
 для тестового окружения, вы можете выполнять на ней любые
 запросы без риска повредить отладочное состояние.
 
-Для управления тестовым сервером есть две функции:
-`load_test_server` и `close_test_server`,
-они находятся в модуле `"lapis.spec.server"`.
-
-Из Busted эти две функции вызываются так:
+Вместо запуска функции `use_test_env` (см. выше) запустим
+функцию `use_test_server`.
 
 ```lua
-local spec_server = require("lapis.spec.server")
+local use_test_server = require("lapis.spec").use_test_server
 
 describe("my site", function()
-  setup(function()
-    spec_server.load_test_server()
-  end)
-
-  teardown(function()
-    spec_server.close_test_server()
-  end)
+  use_test_server()
 
   -- тесты, которые используют сервер
 end)
@@ -239,14 +234,10 @@ end)
 
 
 ```moon
-import load_test_server, close_test_server from require "lapis.spec.server"
+import use_test_server from require "lapis.spec"
 
 describe "my_site", ->
-  setup ->
-    load_test_server!
-
-  teardown ->
-    close_test_server!
+  use_test_server!
 
   -- тесты, которые используют сервер
 ```
@@ -266,17 +257,11 @@ describe "my_site", ->
 Проверим, что `/` загружается без ошибок:
 
 ```lua
-local spec_server = require("lapis.spec.server")
-local request = spec_server.request
+local request = require("lapis.spec.server").request
+local use_test_server = require("lapis.spec")
 
 describe("my site", function()
-  setup(function()
-    spec_server.load_test_server()
-  end)
-
-  teardown(function()
-    spec_server.close_test_server()
-  end)
+  use_test_server()
 
   it("should load /", function()
     local status, body, headers = request("/")
@@ -286,15 +271,11 @@ end)
 ```
 
 ```moon
-import load_test_server, close_test_server, request
-  from require "lapis.spec.server"
+import use_test_server from require "lapis.spec"
+import request from require "lapis.spec.server"
 
 describe "my_site", ->
-  setup ->
-    load_test_server!
-
-  teardown ->
-    close_test_server!
+  use_test_server!
 
   it "should load /", ->
     status, body, headers = request "/"
